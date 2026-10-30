@@ -1,5 +1,5 @@
 import { TrainClock } from './train-clock';
-import { CAR_SPACING, trainPose } from './train-path';
+import { CARS, consistPose } from './train-consist';
 import { frameMarkup } from './train-art';
 
 export type TrainStatus = { running: boolean; reduced: boolean; wanted: boolean };
@@ -7,6 +7,9 @@ export function createTrainRide(stage: HTMLElement, onState: (state: TrainStatus
   const clock = new TrainClock();
   const cars = [...stage.querySelectorAll<HTMLElement>('[data-train-car]')];
   const frames = cars.map((car) => [...car.querySelectorAll<HTMLElement>('.train-frame')]);
+  const chassis = [...stage.querySelectorAll<SVGElement>('[data-train-chassis]')];
+  const couplers = [...stage.querySelectorAll<SVGElement>('[data-train-coupler]')];
+  cars.forEach((car, i) => { car.style.width = `${CARS[i]!.artWidth / 10}%`; });
   const directions = [-1, -1, -1];
   const activeFrame = [0, 0, 0];
   const media = matchMedia('(prefers-reduced-motion: reduce)');
@@ -14,10 +17,14 @@ export function createTrainRide(stage: HTMLElement, onState: (state: TrainStatus
   let request = 0;
   let destroyed = false;
   function render(): void {
+    const poses = consistPose(clock.distance);
     for (const [i, car] of cars.entries()) {
-      const pose = trainPose(clock.distance - i * CAR_SPACING);
-      car.style.transform = `translate3d(${pose.x * width / 1000}px,${pose.y * width / 1000}px,0) scale(${pose.scale})`;
+      const pose = poses[i]!;
+      car.style.transform = `translate3d(${pose.position.x * width / 1000}px,${pose.position.y * width / 1000}px,0) scale(${pose.scale})`;
       car.style.zIndex = String(pose.z);
+      const mount = `M${pose.rearHitch.x},${pose.rearHitch.y}L${pose.frontHitch.x},${pose.frontHitch.y}`;
+      chassis[i]!.style.zIndex = String(pose.z);
+      for (const path of chassis[i]!.querySelectorAll('path')) path.setAttribute('d', mount);
       if (directions[i] !== pose.direction) {
         const next = 1 - activeFrame[i]!;
         frames[i]![next]!.innerHTML = frameMarkup(i === 0, pose.direction);
@@ -27,6 +34,14 @@ export function createTrainRide(stage: HTMLElement, onState: (state: TrainStatus
         directions[i] = pose.direction;
         car.dataset.direction = String(pose.direction);
       }
+    }
+    for (const [i, coupler] of couplers.entries()) {
+      const a = poses[i]!.rearHitch, b = poses[i + 1]!.frontHitch;
+      coupler.style.zIndex = String(Math.round((poses[i]!.position.y + poses[i + 1]!.position.y) / 2));
+      for (const path of coupler.querySelectorAll('path')) path.setAttribute('d', `M${a.x},${a.y}L${b.x},${b.y}`);
+      const circles = coupler.querySelectorAll('circle');
+      circles[0]!.setAttribute('cx', String(a.x)); circles[0]!.setAttribute('cy', String(a.y));
+      circles[1]!.setAttribute('cx', String(b.x)); circles[1]!.setAttribute('cy', String(b.y));
     }
   }
   function tick(time: number): void {

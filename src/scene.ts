@@ -1,5 +1,6 @@
 /** Local atlas cells are independent replaceable scene objects, not a composed background. */
 import atlasUrl from './assets/miniature-atlas.png';
+import { trainMarkup } from './train-art';
 
 export type Asset = 'base' | 'cottage' | 'church' | 'tree' | 'santa' | 'snowman' | 'reindeer' | 'train' | 'pine';
 const labels: Record<Asset, string> = {
@@ -40,7 +41,7 @@ export function scene(): string {
     ${sprite('reindeer', 'object-reindeer')}
     ${sprite('santa', 'object-santa', 'santa')}
     ${sprite('snowman', 'object-snowman', 'snowman')}
-    ${sprite('train', 'object-train', 'train')}
+    ${trainMarkup()}
     <div class="tree-lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
   </div>`;
 }

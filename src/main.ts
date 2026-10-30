@@ -1,4 +1,5 @@
 import './style.css';
+import { createTrainRide } from './train';
 import { icon, type Decoration } from './icons';
 import { scene, artwork, type Asset } from './scene';
 
@@ -20,7 +21,7 @@ app.innerHTML = `
     </div>
     <div class="scene-wrap">${scene()}<div class="snowfall" aria-hidden="true">${Array.from({ length: 22 }, (_, i) => `<i style="--x:${(i * 37 + 11) % 100}%;--y:${(i * 23) % 96}%;--delay:-${i * .73}s;--duration:${8 + (i % 5)}s;--size:${2 + (i % 3)}px"></i>`).join('')}</div></div>
   </section>
-  <section class="decoration-section" aria-label="마을 꾸미기"><div class="decoration-menu" role="group" aria-label="강조할 장식품 선택">${decorations.map(({ id, label, asset }) => `<button class="decoration-button" type="button" data-select="${id}" aria-pressed="${id === 'tree'}"><span class="menu-art">${artwork(asset, true)}</span><span class="decoration-label">${label}</span></button>`).join('')}</div><p class="selection-note" aria-live="polite" id="selection-note"></p></section>
+  <section class="decoration-section" aria-label="마을 꾸미기"><div class="decoration-menu" role="group" aria-label="강조할 장식품 선택">${decorations.map(({ id, label, asset }) => `<button class="decoration-button" type="button" data-select="${id}" aria-pressed="${id === 'tree'}"><span class="menu-art">${artwork(asset, true)}</span><span class="decoration-label">${label}</span>${id === 'train' ? '<span class="train-status">운행 중</span>' : ''}</button>`).join('')}</div><p class="selection-note" aria-live="polite" id="selection-note"></p></section>
   <p id="music-note" class="music-note" role="status">음악과 장식품 바꾸기는 준비 중이에요.</p>`;
 
 let snow = true;
@@ -49,10 +50,26 @@ function selectDecoration(id: Decoration): void {
   for (const ornament of app.querySelectorAll<HTMLElement>('[data-ornament]')) {
     ornament.classList.toggle('selected', ornament.dataset.ornament === id);
   }
+  app.classList.toggle('train-selected', id === 'train');
   const item = decorations.find((item) => item.id === id)!;
   document.querySelector('#selection-note')!.textContent = `${item.label}${item.particle} 선택했어요 · 장식품 바꾸기는 곧 만나요`;
 }
 for (const button of app.querySelectorAll<HTMLButtonElement>('[data-select]')) {
-  button.addEventListener('click', () => selectDecoration(button.dataset.select as Decoration));
+  button.addEventListener('click', () => {
+    selectDecoration(button.dataset.select as Decoration);
+    if (button.dataset.select === 'train') ride.toggle();
+  });
 }
 selectDecoration('tree');
+
+const trainButton = app.querySelector<HTMLButtonElement>('[data-select="train"]')!;
+const ride = createTrainRide(app.querySelector<HTMLElement>('.miniature-stage')!, ({ running, reduced }) => {
+  const status = reduced ? '모션 줄임' : running ? '운행 중' : '일시정지';
+  trainButton.dataset.running = String(running);
+  trainButton.querySelector('.train-status')!.textContent = status;
+  trainButton.setAttribute('aria-label', `기차 · ${status} · ${reduced ? '움직임 줄이기 설정으로 정지' : running ? '누르면 일시정지' : '누르면 다시 운행'}`);
+  if (trainButton.getAttribute('aria-pressed') === 'true') {
+    document.querySelector('#selection-note')!.textContent = reduced ? '움직임 줄이기 설정으로 기차가 정지되어 있어요.' : running ? '기차가 마을을 여행하고 있어요 · 누르면 잠시 쉬어요' : '기차가 쉬고 있어요 · 다시 누르면 이어서 출발해요';
+  }
+});
+if (import.meta.hot) import.meta.hot.dispose(() => ride.destroy());

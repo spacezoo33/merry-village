@@ -1,0 +1,39 @@
+{
+  "name": "merry-village",
+  "version": "0.1.0",
+  "description": "Christmas music box decorating app for Apps in Toss",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "build:web": "vite build",
+    "build:ait": "node scripts/clean-ait.mjs && ait build",
+    "verify:build": "node scripts/verify-build.mjs",
+    "build": "npm run typecheck && npm test && npm run build:web && npm run build:ait && npm run verify:build",
+    "preview": "vite preview --host 0.0.0.0",
+    "deploy": "ait deploy"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spacezoo33/merry-village.git"
+  },
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/spacezoo33/merry-village/issues"
+  },
+  "homepage": "https://github.com/spacezoo33/merry-village#readme",
+  "dependencies": {
+    "@apps-in-toss/web-framework": "3.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "5.9.3",
+    "vite": "8.3.5",
+    "@apps-in-toss/devtools": "3.9.0",
+    "@apps-in-toss/ait-format": "1.0.0"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=24.19.0 <25"
+  }
+}

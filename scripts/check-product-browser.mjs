@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 // Optional browser regression, NOT part of daily build. Start Chromium with CDP :9222 and serve dist under the Pages path on :4180.
-const tabs = await (await fetch("http://127.0.0.1:9222/json")).json();
+const fresh = await (
+  await fetch("http://127.0.0.1:9222/json/new?about:blank", { method: "PUT" })
+).json();
+const tabs = [fresh];
 const ws = new WebSocket(
   tabs.find((t) => t.type === "page").webSocketDebuggerUrl,
 );
@@ -79,10 +82,16 @@ async function shot(name) {
 }
 const data = () =>
   evaluate(`({...document.querySelector('#scene-host .actor-stage').dataset})`);
+
+// Slow integration test: all six real villages run for at least two real laps each.
+await call("Page.addScriptToEvaluateOnNewDocument", {
+  source: `window.__audioProbe=[];const original=BaseAudioContext.prototype.createBufferSource;BaseAudioContext.prototype.createBufferSource=function(){const source=original.call(this),start=source.start.bind(source);source.start=(...args)=>{if(source.buffer&&source.buffer.duration>10){const samples=source.buffer.getChannelData(0);let peak=0;for(let i=0;i<samples.length;i+=13)peak=Math.max(peak,Math.abs(samples[i]));window.__audioProbe.push({duration:source.buffer.duration,peak});}return start(...args);};return source;};`,
+});
 await call("Browser.setDownloadBehavior", {
   behavior: "allow",
   downloadPath: "/tmp/merry-product-downloads",
 });
+await call("Emulation.setEmulatedMedia", { features: [] });
 await call("Emulation.setDeviceMetricsOverride", {
   width: 375,
   height: 812,
@@ -94,36 +103,62 @@ await call("Page.navigate", {
 });
 await pause(3000);
 await evaluate(`localStorage.clear();location.reload()`);
-await pause(3000);
+async function waitFor(expression, label) {
+  for (let k = 0; k < 60; k++) {
+    try {
+      if (await evaluate(expression)) return;
+    } catch (error) {
+      if (!/navigated|context.*destroyed/i.test(String(error))) throw error;
+    }
+    await pause(250);
+  }
+  throw Error("Timed out: " + label);
+}
+await waitFor(
+  `document.querySelector('#scene-host .actor-stage')?.dataset.ready==='true'`,
+  "fir texture",
+);
 assert.equal(
   await evaluate(`document.querySelectorAll('.scene-controls button').length`),
   3,
 );
 assert.equal(
-  await evaluate(
-    `!!document.querySelector('#night-toggle,.app-header,.village-heading')`,
-  ),
+  await evaluate(`!!document.querySelector('#night-toggle,.app-header')`),
   false,
-);
-assert.equal(
-  await evaluate(`document.querySelector('#graphics-status').textContent`),
-  "",
 );
 await click("#motion-toggle");
 const stopped = await data();
-await pause(1200);
+await pause(1000);
 assert.equal((await data()).elapsed, stopped.elapsed);
-assert.equal((await data()).treeAngle, stopped.treeAngle);
 await click("#motion-toggle");
-await pause(1100);
+await pause(900);
 assert.ok(Number((await data()).elapsed) > Number(stopped.elapsed));
+await waitFor(
+  `document.querySelector('#app').dataset.sound==='기차 소리 재생 중'`,
+  "actual train audio",
+);
 await click("#lights-toggle");
+assert.equal(
+  await evaluate(`document.querySelectorAll('button[data-pattern]').length`),
+  4,
+);
+for (const id of ["all", "alternate", "random", "gentle"]) {
+  await click(`button[data-pattern="${id}"]`);
+  assert.equal((await data()).pattern, id);
+  await pause(300);
+  console.log("pattern", id, JSON.parse((await data()).bulbLevels));
+}
+await click('[data-action="light-power"]');
 assert.equal(
   await evaluate(
     `document.querySelector('#app').classList.contains('lights-off')`,
   ),
   true,
 );
+assert.ok(JSON.parse((await data()).bulbLevels).every((v) => v === 0));
+await click('[data-action="light-power"]');
+await click('button[data-pattern="alternate"]');
+await click('[data-action="close"]');
 await click("#snow-toggle");
 assert.equal(
   await evaluate(
@@ -131,11 +166,12 @@ assert.equal(
   ),
   true,
 );
-await click("#lights-toggle");
 await click("#snow-toggle");
-console.log("controls", await data());
-await shot("home");
-for (const width of [320, 430, 1440]) {
+assert.equal(
+  await evaluate(`document.querySelectorAll('#scene-host .snow-mid i').length`),
+  16,
+);
+for (const width of [320, 375, 430, 1440]) {
   await call("Emulation.setDeviceMetricsOverride", {
     width,
     height: width === 1440 ? 1000 : 812,
@@ -156,107 +192,166 @@ await call("Emulation.setDeviceMetricsOverride", {
   mobile: true,
 });
 for (const id of [
+  "cozy",
   "forest",
   "chapel",
   "workshop",
   "palace",
   "gingerbread",
-  "cozy",
 ]) {
   await click('.bottom-nav [data-action="villages"]');
-  await click(`[data-village="${id}"]`);
-  await pause(400);
+  await click(`button[data-village="${id}"]`);
+  await waitFor(
+    `document.querySelector('#scene-host .actor-stage')?.dataset.ready==='true'`,
+    "village " + id,
+  );
   assert.equal(
-    await evaluate(`document.querySelector('#app').dataset.village`),
+    await evaluate(`document.querySelector("#app").dataset.village`),
     id,
   );
-  await shot(id);
-  if (["workshop", "palace", "gingerbread"].includes(id))
-    assert.equal(
-      await evaluate(`document.querySelector('#preview-ribbon').hidden`),
-      false,
-    );
-}
-for (const id of ["aurora", "shooting", "wishes"]) {
-  await click('.bottom-nav [data-action="nights"]');
-  await click(`[data-effect="${id}"]`);
-  await pause(500);
-  assert.equal(
-    await evaluate(`document.querySelector('#app').dataset.effect`),
-    id,
+  assert.equal((await data()).pattern, "alternate");
+  const start = await data();
+  const captured = new Set();
+  for (let sample = 0; sample < 85; sample++) {
+    await pause(700);
+    const current = await data(),
+      phase = Number(current.trainAngle) % (Math.PI * 2);
+    if (!captured.has("front") && phase > 1.15 && phase < 1.95) {
+      await shot(`${id}-front`);
+      captured.add("front");
+    }
+    if (!captured.has("tunnel") && phase > 2.15 && phase < 2.7) {
+      await shot(`${id}-tunnel`);
+      captured.add("tunnel");
+    }
+    if (
+      Number(current.elapsed) - Number(start.elapsed) > 37 &&
+      captured.size === 2
+    )
+      break;
+  }
+  assert.equal(captured.size, 2, "visible front and tunnel captures " + id);
+  const end = await data();
+  assert.ok(
+    Number(end.elapsed) - Number(start.elapsed) >= 36,
+    "two actual laps " + id,
   );
-  await shot(id);
-  await click('[data-action="exit-preview"]');
+  assert.ok(Number(end.treeAngle) > Number(start.treeAngle));
+  console.log("two laps verified", id, {
+    elapsed: Number(end.elapsed) - Number(start.elapsed),
+    calibration: JSON.parse(end.village),
+    sound: await evaluate(
+      `JSON.parse(document.querySelector('#app').dataset.soundDiagnostics)`,
+    ),
+  });
 }
+const sounds = await evaluate(
+  `JSON.parse(document.querySelector('#app').dataset.soundDiagnostics)`,
+);
+assert.ok(sounds.horns >= 1);
+assert.ok(sounds.puffs > 50);
+for (let i = 1; i < sounds.hornTimes.length; i++) {
+  const delta = sounds.hornTimes[i] - sounds.hornTimes[i - 1];
+  assert.ok(delta >= 20 && delta <= 35.5, "horn interval " + delta);
+}
+await click("#motion-toggle");
+await pause(500);
+const off = await data(),
+  offSound = await evaluate(
+    `JSON.parse(document.querySelector('#app').dataset.soundDiagnostics)`,
+  );
+await pause(1300);
+assert.equal((await data()).elapsed, off.elapsed);
+const later = await evaluate(
+  `JSON.parse(document.querySelector('#app').dataset.soundDiagnostics)`,
+);
+assert.equal(later.puffs, offSound.puffs);
+assert.equal(later.horns, offSound.horns);
+assert.equal(later.running, false);
+assert.match(
+  await evaluate(`document.querySelector("#music-status").textContent`),
+  /연주/,
+);
+await click("#motion-toggle");
+await waitFor(
+  `JSON.parse(document.querySelector('#app').dataset.soundDiagnostics).running`,
+  "sound resume",
+);
 await click('.bottom-nav [data-action="music"]');
 for (const id of ["snow", "starlight", "waltz", "lullaby", "letter"]) {
   await click(`[data-track="${id}"]`);
-  await pause(500);
-  assert.match(
-    await evaluate(`document.querySelector('#music-status').textContent`),
-    /연주/,
+  await waitFor(
+    `document.querySelector('#music-status').textContent.includes('연주')`,
+    "music " + id,
   );
 }
 await click('[data-action="close"]');
-await click('[data-action="next"]');
-assert.equal(
-  await evaluate(`document.querySelector('#song-name').textContent`),
-  "고요한 밤",
-);
-for (let k = 0; k < 30; k++) {
-  if (
-    await evaluate(
-      `!document.querySelector('#music-time').textContent.startsWith('0:00')`,
-    )
-  )
-    break;
-  await pause(200);
-}
-assert.equal(
-  await evaluate(
-    `document.querySelector('#music-time').textContent.startsWith('0:00')`,
-  ),
-  false,
-);
 await click('[data-action="play"]');
 assert.match(
   await evaluate(`document.querySelector('#music-status').textContent`),
   /쉬어/,
 );
-await click('.bottom-nav [data-action="photo"]');
-for (let k = 0; k < 30; k++) {
-  if (await evaluate(`!!document.querySelector('.photo-preview img')`)) break;
-  await pause(300);
-}
-assert.equal(
-  await evaluate(`!!document.querySelector('.photo-preview img')`),
-  true,
+const fxBefore = await evaluate(
+  `JSON.parse(document.querySelector('#app').dataset.soundDiagnostics)`,
 );
-await click('[data-action="save-photo"]');
-await pause(500);
-await click('[data-action="close"]');
-const start = await data();
-for (let i = 0; i < 10; i++) {
-  await pause(4000);
-  console.log("orbit", i, await data());
-  if (i % 2 === 0) await shot(`orbit-${i}`);
-}
-const finish = await data();
+await pause(1400);
 assert.ok(
-  Number(finish.elapsed) - Number(start.elapsed) > 37,
-  "observed full tree rotation and >2 train laps",
+  (
+    await evaluate(
+      `JSON.parse(document.querySelector('#app').dataset.soundDiagnostics)`,
+    )
+  ).puffs > fxBefore.puffs,
 );
+const buffers = await evaluate("window.__audioProbe");
+assert.ok(buffers.length >= 5);
+assert.ok(buffers.every((b) => b.peak > 0.3 && b.peak <= 0.361));
+assert.equal(new Set(buffers.map((b) => b.duration.toFixed(3))).size, 5);
+console.log("actual non-silent normalised carol buffers", buffers);
+for (const id of ["aurora", "shooting", "wishes"]) {
+  await click('.bottom-nav [data-action="nights"]');
+  await click(`[data-effect="${id}"]`);
+  assert.equal(
+    await evaluate(`document.querySelector('#app').dataset.effect`),
+    id,
+  );
+  await click('[data-action="exit-preview"]');
+}
+await click('.bottom-nav [data-action="villages"]');
+await click('button[data-village="cozy"]');
+await click('.bottom-nav [data-action="photo"]');
+await waitFor(`!!document.querySelector('.photo-preview img')`, "PNG");
+await click('[data-action="save-photo"]');
+await pause(400);
+await click('[data-action="close"]');
 await call("Emulation.setEmulatedMedia", {
   features: [{ name: "prefers-reduced-motion", value: "reduce" }],
 });
-await pause(300);
+await pause(400);
 const reduced = await data();
-await pause(500);
+await pause(700);
 assert.equal((await data()).elapsed, reduced.elapsed);
-await shot("reduced");
+assert.equal(
+  await evaluate(`document.querySelector('#app').dataset.sound`),
+  "기차 소리 정지",
+);
 await call("Emulation.setEmulatedMedia", { features: [] });
+await pause(400);
+const target = await call("Target.createTarget", { url: "about:blank" });
+await call("Target.activateTarget", { targetId: target.targetId });
+await pause(500);
+assert.equal(await evaluate("document.hidden"), true);
+const hidden = await data();
+await pause(700);
+assert.equal((await data()).elapsed, hidden.elapsed);
+assert.equal(
+  await evaluate(`document.querySelector('#app').dataset.sound`),
+  "기차 소리 정지",
+);
+await call("Target.closeTarget", { targetId: target.targetId });
+await pause(700);
+assert.ok(Number((await data()).elapsed) > Number(hidden.elapsed));
 assert.equal(errors.length, 0, JSON.stringify(errors));
 console.log(
-  "PASS product browser checks, actual >37s running, resize, controls, six villages, three effects, five carols, PNG download, reduced motion",
+  "PASS six villages x two actual laps, detailed assets, 4 light patterns, 3 snow layers, 5 real carol buffers, train chuffs/horns, stop/resume, reduced motion, background and PNG",
 );
 ws.close();

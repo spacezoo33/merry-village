@@ -1,3 +1,4 @@
+import { audioContext } from "./audio-engine";
 import { TRACKS, type TrackId } from "./catalog";
 export type MusicState = "playing" | "paused" | "blocked" | "unavailable";
 /** In-house synthesis of documented public-domain carols. No downloaded recording. */
@@ -57,29 +58,64 @@ export class MusicPlayer {
         rate,
       ),
       data = buffer.getChannelData(0);
+    // Fresh stereo-like bell overtones, low accompaniment and sparse small chimes.
+    // Every voice has an attack/release; peak normalisation prevents track-to-track jumps.
+    const add = (
+      midi: number,
+      at: number,
+      length: number,
+      level: number,
+      kind: "bell" | "soft" = "bell",
+    ) => {
+      const hz = 440 * 2 ** ((midi - 69) / 12),
+        start = Math.floor(at * rate),
+        n = Math.min(Math.floor((length + 1.4) * rate), data.length - start);
+      for (let i = 0; i < n; i++) {
+        const t = i / rate,
+          attack = Math.min(1, t / 0.009),
+          release = Math.exp(
+            -t / (kind === "bell" ? Math.min(1.05, length + 0.2) : 0.55),
+          );
+        const wave =
+          kind === "bell"
+            ? Math.sin(t * hz * Math.PI * 2) +
+              0.28 * Math.sin(t * hz * 2.76 * Math.PI * 2) * Math.exp(-t * 2) +
+              0.1 * Math.sin(t * hz * 5.4 * Math.PI * 2) * Math.exp(-t * 5)
+            : Math.sin(t * hz * Math.PI * 2) +
+              0.13 * Math.sin(t * hz * 4 * Math.PI);
+        data[start + i]! += wave * attack * release * level;
+      }
+    };
     let at = 0;
     for (const token of score.score.split(" ")) {
-      const [midi, beats] = token.split(":").map(Number) as [number, number];
-      const duration = (beats * 60) / score.bpm;
-      if (midi) {
-        const hz = 440 * 2 ** ((midi - 69) / 12),
-          n = Math.min(
-            Math.floor((duration + 0.8) * rate),
-            data.length - Math.floor(at * rate),
-          );
-        for (let i = 0; i < n; i++) {
-          const t = i / rate,
-            env =
-              Math.min(1, t / 0.008) *
-              Math.exp(-t / Math.min(0.65, duration * 0.8));
-          data[Math.floor(at * rate) + i]! +=
-            (Math.sin(t * hz * Math.PI * 2) * 0.27 +
-              Math.sin(t * hz * 4 * Math.PI) * 0.045 +
-              Math.sin(t * hz * 6 * Math.PI) * 0.012) *
-            env;
-        }
+      const [midi, beats] = token.split(":").map(Number) as [number, number],
+        length = (beats * 60) / score.bpm;
+      if (midi) add(midi, at, length, 0.21);
+      at += length;
+    }
+    const beat = 60 / score.bpm;
+    const progression = [0, 5, 0, 7, 0, 5, 7, 0];
+    for (let bar = 0; bar * score.meter * beat < this.duration; bar++) {
+      const root = score.root + progression[bar % 8]!,
+        base = bar * score.meter * beat;
+      add(root - 12, base, beat * 1.2, 0.052, "soft");
+      for (let step = 1; step < score.meter; step++) {
+        const note = [root + 4, root + 7][(step - 1) % 2]!;
+        add(note, base + step * beat, beat, 0.023, "soft");
       }
-      at += duration;
+      if (bar % 4 === 0 && base + beat / 2 < this.duration)
+        add(root + 24, base + beat / 2, 0.7, 0.016);
+    }
+    let peak = 0;
+    for (const v of data) peak = Math.max(peak, Math.abs(v));
+    const normalise = 0.36 / Math.max(peak, 0.001);
+    for (let i = 0; i < data.length; i++) {
+      const fade = Math.min(
+        1,
+        i / (rate * 0.025),
+        (data.length - i) / (rate * 0.09),
+      );
+      data[i]! *= normalise * fade;
     }
     if (this.buffers.size >= 2)
       this.buffers.delete(this.buffers.keys().next().value!);
@@ -92,7 +128,7 @@ export class MusicPlayer {
     const generation = ++this.generation;
     try {
       if (!this.context) {
-        this.context = new AudioContext();
+        this.context = audioContext();
         this.gain = this.context.createGain();
         this.gain.gain.value = this.volume;
         this.gain.connect(this.context.destination);
@@ -132,7 +168,6 @@ export class MusicPlayer {
     this.wanted = false;
     this.generation++;
     this.stop();
-    void this.context?.suspend();
     this.notify("paused");
   }
   toggle() {
@@ -163,7 +198,6 @@ export class MusicPlayer {
     if (hidden) {
       this.generation++;
       this.stop();
-      void this.context?.suspend();
       this.notify("paused");
     } else if (this.wanted) void this.play();
   }
@@ -174,6 +208,6 @@ export class MusicPlayer {
     this.generation++;
     this.stop();
     this.buffers.clear();
-    void this.context?.close();
+    this.gain?.disconnect();
   }
 }

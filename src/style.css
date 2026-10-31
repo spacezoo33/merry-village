@@ -1712,3 +1712,132 @@ h1 span {
   font-size: 11px;
   color: #f5ddb6;
 }
+/* Three spatial snow layers; a few large near flakes instead of many tiny dots. */
+.snow-back {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  filter: blur(0.8px);
+  opacity: 0.65;
+  pointer-events: none;
+}
+.snow-mid {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.8;
+  pointer-events: none;
+}
+.snow-front {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.snowfall i,
+.snowfall i:nth-child(3n) {
+  width: var(--size);
+  height: var(--size);
+  background: radial-gradient(
+    circle,
+    #fffdf6 30%,
+    #fff6eccc 65%,
+    transparent 75%
+  );
+  filter: drop-shadow(0 1px 1px #2b170940);
+  animation: snow-depth var(--duration) var(--delay) linear infinite;
+  opacity: 0;
+}
+.snow-front i:nth-child(3n) {
+  border-radius: 20%;
+  transform: rotate(30deg);
+  filter: drop-shadow(0 1px 2px #22120750);
+}
+@keyframes snow-depth {
+  0% {
+    opacity: 0;
+    translate: 0 -5%;
+  }
+  8% {
+    opacity: 0.88;
+  }
+  40% {
+    translate: var(--drift) 180px;
+  }
+  70% {
+    translate: calc(var(--drift) * -0.5) 350px;
+    opacity: 0.8;
+  }
+  100% {
+    translate: var(--drift) 530px;
+    opacity: 0;
+  }
+}
+.architectural-lights i {
+  animation: none !important;
+  transition: none;
+  filter: brightness(calc(0.5 + var(--intensity, 1) * 0.8));
+}
+.lighting-sheet {
+  inset: max(70px, env(safe-area-inset-top)) 12px auto auto;
+  width: min(340px, calc(100% - 24px));
+  max-height: 80svh;
+  border-radius: 23px;
+}
+.lighting-sheet .sheet-shell {
+  padding: 14px 18px 20px;
+}
+.lighting-sheet .sheet-header h2 {
+  font-size: 21px;
+}
+.light-power,
+.lighting-patterns button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  border: 1px solid #dbc6a6;
+  border-radius: 14px;
+  background: #f4e8d4;
+  color: #65452c;
+  padding: 12px;
+  margin-bottom: 8px;
+  text-align: left;
+}
+.light-power {
+  background: #765331;
+  color: #fff0d6;
+  border-color: #b39360;
+}
+.light-power span:first-of-type {
+  flex: 1;
+}
+.lighting-patterns {
+  margin-top: 14px;
+}
+.lighting-patterns strong,
+.lighting-patterns small {
+  display: block;
+}
+.lighting-patterns small {
+  font-size: 10px;
+  line-height: 1.5;
+  margin-top: 4px;
+  color: #84684b;
+}
+.lighting-patterns button[aria-pressed="true"] {
+  border-color: #a67b39;
+  box-shadow: inset 0 0 0 1px #be9654;
+  background: #f9e8bf;
+}
+@media (prefers-reduced-motion: reduce) {
+  .snowfall i,
+  .snowfall i:nth-child(3n) {
+    animation: none !important;
+    top: var(--y);
+    opacity: 0.7;
+    translate: 0 0;
+  }
+}

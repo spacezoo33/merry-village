@@ -1,3 +1,5 @@
+import { architecturalPoints } from "./rail-profiles";
+import { lightLevel, type LightPattern } from "./lighting";
 import background from "./assets/christmas-room.png";
 import { productAtlas, productCrop } from "./product";
 import type { NightId, VillageId } from "./catalog";
@@ -26,6 +28,8 @@ export async function captureVillage(
   effect: NightId | null,
   lights: boolean,
   actors: HTMLCanvasElement | null,
+  pattern: LightPattern = "gentle",
+  lightingTime = 0,
 ): Promise<Blob> {
   const [bg, atlas] = await Promise.all([load(background), load(productAtlas)]);
   const canvas = document.createElement("canvas");
@@ -54,8 +58,9 @@ export async function captureVillage(
   if (actors) c.drawImage(actors, 0, 180, 1200, 1200);
   if (lights) {
     for (let i = 0; i < 12; i++) {
-      const x = [12, 20, 29, 38, 66, 76, 85, 91, 22, 78, 33, 62][i]! * 12,
-        y = 180 + [42, 46, 40, 45, 43, 45, 47, 42, 68, 69, 57, 58][i]! * 12;
+      const point = architecturalPoints(id)[i]!,
+        x = point.x * 12,
+        y = 180 + point.y * 12;
       const g = c.createRadialGradient(
         x,
         y,
@@ -64,7 +69,13 @@ export async function captureVillage(
         y,
         effect === "wishes" ? 40 : 21,
       );
-      g.addColorStop(0, "#ffce7cb3");
+      const alpha = lightLevel(
+        pattern,
+        lightingTime,
+        i,
+        matchMedia("(prefers-reduced-motion: reduce)").matches,
+      );
+      g.addColorStop(0, `rgba(255,206,124,${alpha * 0.8})`);
       g.addColorStop(1, "#ffb94c00");
       c.fillStyle = g;
       c.fillRect(x - 40, y - 40, 80, 80);

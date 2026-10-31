@@ -1,3 +1,7 @@
+import { setAudioHidden, disposeAudio } from "./audio-engine";
+import { LIGHT_PATTERNS, type LightPattern } from "./lighting";
+import { snowLayer } from "./snow";
+import { TrainSound } from "./train-sound";
 import "./style.css";
 import {
   VILLAGES,
@@ -43,7 +47,7 @@ let preview: {
   effect: NightId | null;
   night: boolean;
 } | null = null;
-type Sheet = "villages" | "music" | "nights" | "photo" | "pass";
+type Sheet = "villages" | "music" | "nights" | "photo" | "pass" | "lighting";
 let sheet: Sheet | null = null;
 let availability: AdAvailability | null = null,
   availabilityPromise: Promise<void> | null = null;
@@ -66,7 +70,7 @@ const nav: { id: Sheet; label: string; icon: Icon }[] = [
 app.innerHTML = `
  <main class="experience">
  <div class="hero"><div class="night-effects" aria-hidden="true"><div class="aurora"></div><div class="starfield"><i style="--sx:7%;--sy:0%;--sd:-0.0s"></i><i style="--sx:44%;--sy:23%;--sd:-0.63s"></i><i style="--sx:81%;--sy:46%;--sd:-1.26s"></i><i style="--sx:18%;--sy:69%;--sd:-1.8900000000000001s"></i><i style="--sx:55%;--sy:2%;--sd:-2.52s"></i><i style="--sx:92%;--sy:25%;--sd:-3.15s"></i><i style="--sx:29%;--sy:48%;--sd:-3.7800000000000002s"></i><i style="--sx:66%;--sy:71%;--sd:-4.41s"></i><i style="--sx:3%;--sy:4%;--sd:-5.04s"></i><i style="--sx:40%;--sy:27%;--sd:-5.67s"></i><i style="--sx:77%;--sy:50%;--sd:-6.3s"></i><i style="--sx:14%;--sy:73%;--sd:-6.93s"></i><i style="--sx:51%;--sy:6%;--sd:-7.5600000000000005s"></i><i style="--sx:88%;--sy:29%;--sd:-8.19s"></i><i style="--sx:25%;--sy:52%;--sd:-8.82s"></i><i style="--sx:62%;--sy:75%;--sd:-9.45s"></i><i style="--sx:99%;--sy:8%;--sd:-10.08s"></i><i style="--sx:36%;--sy:31%;--sd:-10.71s"></i><i style="--sx:73%;--sy:54%;--sd:-11.34s"></i><i style="--sx:10%;--sy:77%;--sd:-11.97s"></i><i style="--sx:47%;--sy:10%;--sd:-12.6s"></i><i style="--sx:84%;--sy:33%;--sd:-13.23s"></i><i style="--sx:21%;--sy:56%;--sd:-13.86s"></i><i style="--sx:58%;--sy:79%;--sd:-14.49s"></i></div><div class="wishes">${Array.from({ length: 12 }, (_, i) => `<i style="--left:${(i * 31 + 9) % 94}%;--delay:-${i * 0.9}s;--duration:${8 + (i % 4)}s"></i>`).join("")}</div></div>
- <div id="scene-host"></div><div class="snowfall" aria-hidden="true">${Array.from({ length: 24 }, (_, i) => `<i style="--x:${(i * 37 + 11) % 100}%;--y:${(i * 23) % 96}%;--delay:-${i * 0.73}s;--duration:${8 + (i % 5)}s;--size:${2 + (i % 3)}px"></i>`).join("")}</div>
+ ${snowLayer("back")}<div id="scene-host"></div>${snowLayer("front")}
  <div class="scene-controls" role="group" aria-label="오르골 조작">${(
    [
      { id: "motion", label: "동작", symbol: "play" },
@@ -85,6 +89,9 @@ app.innerHTML = `
  </main><nav class="bottom-nav" aria-label="메인 메뉴">${nav.map((item) => `<button data-action="${item.id}" aria-label="${item.label}" aria-expanded="false">${icon(item.icon)}<span>${item.label}</span></button>`).join("")}</nav>
  <dialog class="sheet" id="sheet" aria-labelledby="sheet-title"><div class="sheet-shell"><header class="sheet-header"><div><p class="eyebrow">MERRY VILLAGE</p><h2 id="sheet-title"></h2></div><button class="close-button" data-action="close" aria-label="닫기">${icon("close")}</button></header><div id="sheet-content"></div><p id="sheet-feedback" class="sheet-feedback" role="status" aria-live="polite"></p></div></dialog>
  <div id="toast" class="toast" role="status" aria-live="polite"></div>`;
+const trainSound = new TrainSound((status) => {
+  app.dataset.sound = status;
+});
 const dialog = app.querySelector<HTMLDialogElement>("#sheet")!;
 const content = app.querySelector<HTMLElement>("#sheet-content")!;
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -173,6 +180,7 @@ function render(): void {
     try {
       actors = new Actors(
         app.querySelector<HTMLElement>("#scene-host .actor-stage")!,
+        current.village,
       );
       app.querySelector("#graphics-status")!.textContent = "";
     } catch {
@@ -189,9 +197,16 @@ function render(): void {
   actors?.update({
     motion: preferences.motion,
     lights: preferences.lights,
+    pattern: preferences.lightPattern,
     gold: current.effect === "wishes",
     hidden: document.hidden || rewardBusy,
   });
+  trainSound.setRunning(
+    preferences.motion &&
+      !reducedMotion.matches &&
+      !document.hidden &&
+      !rewardBusy,
+  );
   app.classList.toggle("snow-off", !preferences.snow);
   if (actors)
     app.querySelector("#graphics-status")!.textContent = reducedMotion.matches
@@ -200,9 +215,12 @@ function render(): void {
   for (const id of ["motion", "lights", "snow"] as const) {
     const button = app.querySelector<HTMLButtonElement>(`#${id}-toggle`)!;
     button.setAttribute("aria-pressed", String(preferences[id]));
-    app.querySelector(`#${id}-label`)!.textContent = preferences[id]
-      ? "ON"
-      : "OFF";
+    app.querySelector(`#${id}-label`)!.textContent =
+      id === "lights" ? "설정" : preferences[id] ? "ON" : "OFF";
+    if (id === "lights") {
+      button.setAttribute("aria-label", "조명 설정");
+      button.setAttribute("aria-haspopup", "dialog");
+    }
     if (id === "motion") button.disabled = !actors;
   }
   app.querySelector<HTMLElement>("#preview-ribbon")!.hidden = !preview;
@@ -223,6 +241,7 @@ function openSheet(next: Sheet): void {
   if (photoLocked) next = "pass";
   if (sheet === "photo" && next !== "photo") cleanPhoto();
   sheet = next;
+  dialog.classList.toggle("lighting-sheet", next === "lighting");
   app.querySelector("#sheet-feedback")!.textContent = "";
   renderSheet();
   for (const b of app.querySelectorAll("[aria-expanded]"))
@@ -247,9 +266,12 @@ function renderSheet(): void {
     nights: "조금 더 특별한 밤",
     photo: "이 순간을 사진으로",
     pass: "특별한 겨울, 7일 동안",
+    lighting: "조명 설정",
   };
   app.querySelector("#sheet-title")!.textContent = sheet ? title[sheet] : "";
-  if (sheet === "villages") {
+  if (sheet === "lighting") {
+    content.innerHTML = `<button class="light-power" data-action="light-power" aria-pressed="${preferences.lights}">${icon("lantern")}<span>장식 조명 ${preferences.lights ? "ON" : "OFF"}</span><span>${preferences.lights ? "켜짐" : "꺼짐"}</span></button><div class="lighting-patterns" role="group" aria-label="점멸 패턴">${LIGHT_PATTERNS.map((p) => `<button data-pattern="${p.id}" aria-pressed="${preferences.lightPattern === p.id}"><span><strong>${p.name}</strong><small>${p.description}</small></span>${icon(preferences.lightPattern === p.id ? "check" : "star")}</button>`).join("")}</div><p class="small-note">창문과 기본 가로등의 따뜻한 빛은 유지돼요. 움직임 줄이기에서는 점멸을 멈춰요.</p>`;
+  } else if (sheet === "villages") {
     content.innerHTML = `<p class="sheet-description">무료 마을 3곳은 언제든 머물 수 있어요. 특별 마을은 이용권 없이도 미리 볼 수 있어요.</p><div class="village-grid">${VILLAGES.map((v) => `<button class="village-card" data-village="${v.id}" aria-pressed="${display().village === v.id}"><span class="card-art card-${v.id}">${scene(v.id)}</span><span class="card-body"><span class="card-badge ${v.premium ? "premium" : ""}">${v.premium ? icon("star") : icon("check")}${cardLabel(v.premium)}</span><strong>${v.name}</strong><span>${v.subtitle}</span></span></button>`).join("")}</div><button class="wide-button gold" data-action="pass">${icon("star")}${unlocked() ? "내 7일 이용권 확인" : "특별 빌리지 3종 · 7일 이용권"}</button>`;
   } else if (sheet === "music") {
     content.innerHTML = `<p class="sheet-description">서로 다른 퍼블릭 도메인 캐럴 5곡을 직접 합성한 오르골로 반복 연주해요.<br>브라우저에서는 첫 재생에 터치가 필요할 수 있어요.</p><div class="tracks">${TRACKS.map((t, i) => `<button class="track-row" data-track="${t.id}" aria-pressed="${preferences.track === t.id}"><span class="track-number">0${i + 1}</span><span><strong>${t.name}</strong><small>${t.mood} · ${t.bpm} BPM</small></span><span class="track-note">${icon("music")}</span></button>`).join("")}</div><div class="volume-control"><label for="volume">음량</label><input id="volume" type="range" min="0" max="1" step="0.05" value="${preferences.volume}"><output id="volume-value">${Math.round(preferences.volume * 100)}%</output><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button></div><p class="small-note">외부 녹음물을 사용하지 않는 자체 합성 연주예요. 악보의 Public Domain 표기와 출처는 프로젝트 음악 권리 문서에 기록했어요.</p>`;
@@ -326,6 +348,8 @@ async function takePhoto(): Promise<void> {
       current.effect,
       preferences.lights,
       actors?.snapshot() ?? null,
+      preferences.lightPattern,
+      actors?.lightingTime ?? 0,
     );
     if (token !== photoToken || sheet !== "photo") return;
     photoBlob = blob;
@@ -379,12 +403,17 @@ function syncVisibility(): void {
   const hidden = document.hidden || rewardBusy;
   app.classList.toggle("ambient-paused", hidden);
   player.setHidden(hidden);
+  trainSound.setRunning(
+    preferences.motion && !reducedMotion.matches && !hidden,
+  );
   actors?.update({
     motion: preferences.motion,
     lights: preferences.lights,
+    pattern: preferences.lightPattern,
     gold: display().effect === "wishes",
     hidden,
   });
+  setAudioHidden(hidden);
   if (!document.hidden) checkExpiry();
 }
 app.addEventListener("click", (event) => {
@@ -393,6 +422,16 @@ app.addEventListener("click", (event) => {
   const village = target.dataset.village as VillageId | undefined,
     track = target.dataset.track as TrackId | undefined,
     effect = target.dataset.effect as NightId | "none" | undefined;
+  if (target.dataset.pattern) {
+    const pattern = target.dataset.pattern as LightPattern;
+    if (LIGHT_PATTERNS.some((p) => p.id === pattern)) {
+      preferences.lightPattern = pattern;
+      persist();
+      render();
+      renderSheet();
+    }
+    return;
+  }
   if (village) {
     checkExpiry();
     if (villageById(village).premium && !unlocked())
@@ -454,9 +493,13 @@ app.addEventListener("click", (event) => {
       render();
       break;
     case "lights":
+      openSheet("lighting");
+      break;
+    case "light-power":
       preferences.lights = !preferences.lights;
       persist();
       render();
+      renderSheet();
       break;
     case "previous":
     case "next": {
@@ -518,15 +561,22 @@ document.addEventListener("visibilitychange", syncVisibility);
 reducedMotion.addEventListener("change", render);
 const expiryTimer = setInterval(checkExpiry, 30_000);
 const gesture = (event: PointerEvent) => {
+  if (
+    preferences.motion &&
+    !reducedMotion.matches &&
+    !trainSound.diagnostics.running
+  )
+    void trainSound.unlock();
   if ((event.target as Element).closest("[data-action=play],[data-track]"))
     return;
   if (player.isWanted && musicState !== "playing") void player.play();
 };
-document.addEventListener("pointerdown", gesture, { once: true });
+document.addEventListener("pointerdown", gesture);
 const progress = app.querySelector<HTMLInputElement>("#progress")!;
 const time = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 function updateProgress() {
+  app.dataset.soundDiagnostics = JSON.stringify(trainSound.diagnostics);
   progress.max = String(player.duration);
   if (document.activeElement !== progress)
     progress.value = String(player.currentTime);
@@ -550,7 +600,9 @@ if (import.meta.hot)
     actors?.destroy();
     reducedMotion.removeEventListener("change", render);
     clearInterval(progressTimer);
+    trainSound.destroy();
     player.destroy();
+    disposeAudio();
     clearInterval(expiryTimer);
     clearTimeout(toastTimer);
     cleanPhoto();

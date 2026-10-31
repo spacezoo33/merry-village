@@ -1,3 +1,4 @@
+import { LIGHT_PATTERNS, type LightPattern } from "./lighting.ts";
 import {
   NIGHTS,
   TRACKS,
@@ -14,6 +15,7 @@ export type Preferences = {
   snow: boolean;
   motion: boolean;
   lights: boolean;
+  lightPattern: LightPattern;
   night: boolean;
   effect: NightId | null;
   volume: number;
@@ -25,6 +27,7 @@ export const defaults = (): Preferences => ({
   snow: true,
   motion: true,
   lights: true,
+  lightPattern: "gentle",
   night: false,
   effect: null,
   volume: 0.35,
@@ -60,6 +63,8 @@ export function parsePreferences(raw: string | null): Preferences {
     if (TRACKS.some((t) => t.id === p.track)) result.track = p.track;
     if (NIGHTS.some((n) => n.id === p.effect)) result.effect = p.effect;
     if (typeof p.motion === "boolean") result.motion = p.motion;
+    if (LIGHT_PATTERNS.some((v) => v.id === p.lightPattern))
+      result.lightPattern = p.lightPattern;
     if (typeof p.lights === "boolean") result.lights = p.lights;
     if (typeof p.snow === "boolean") result.snow = p.snow;
     if (typeof p.night === "boolean") result.night = p.night;

@@ -51,14 +51,8 @@ test("new controls default to on and safely migrate old saved preferences", () =
   assert.equal(p.motion, false);
   assert.equal(p.lights, false);
 });
-test("five distinct carols have public-domain source declarations, not licensed third-party recordings", async () => {
-  for (const file of [
-    "silent-night",
-    "first-noel",
-    "midnight-clear",
-    "greensleeves",
-    "holly-ivy",
-  ])
+test("checked historical scores have public-domain declarations, not licensed third-party recordings", async () => {
+  for (const file of ["silent-night", "joy-to-world", "hark-herald"])
     assert.match(
       await readFile(
         new URL(`../docs/music-sources/${file}.ly`, import.meta.url),
@@ -66,4 +60,61 @@ test("five distinct carols have public-domain source declarations, not licensed 
       ),
       /copyright\s*=\s*"Public Domain"/,
     );
+});
+
+test("six calibrated railways meet their own atlas tunnel contact points and stay on the trackbed", async () => {
+  const { RAIL_PROFILES, PORTAL_ANGLE, projectRail, railCalibration } =
+    await import("../src/rail-profiles.ts");
+  const profiles = Object.entries(RAIL_PROFILES);
+  assert.equal(profiles.length, 6);
+  for (const [id, p] of profiles) {
+    const right = projectRail(id, PORTAL_ANGLE),
+      left = projectRail(id, Math.PI - PORTAL_ANGLE),
+      front = projectRail(id, Math.PI / 2);
+    assert.ok(Math.abs(right.x - p.right[0]) < 1e-8);
+    assert.ok(Math.abs(right.y - p.right[1]) < 1e-8);
+    assert.ok(Math.abs(left.x - p.left[0]) < 1e-8);
+    assert.ok(Math.abs(left.y - p.left[1]) < 1e-8);
+    assert.ok(Math.abs(front.y - p.front[1]) < 1e-8);
+    const c = railCalibration(id);
+    assert.ok(c.elevation > 0.35 && c.elevation < 0.8);
+    for (let i = 0; i < 720; i++) {
+      const cars = consist((i / 720) * Math.PI * 4, c.scale);
+      for (let j = 1; j < cars.length; j++)
+        assert.ok(
+          Math.abs(
+            Math.hypot(
+              cars[j - 1].rear.x - cars[j].front.x,
+              cars[j - 1].rear.z - cars[j].front.z,
+            ) -
+              COUPLER_LENGTH * c.scale,
+          ) < 1e-9,
+        );
+    }
+  }
+  assert.ok(RAIL_PROFILES.cozy.front[1] - RAIL_PROFILES.workshop.front[1] > 40);
+});
+test("four gentle lighting patterns are bounded, continuous, distinct and static under reduced motion", async () => {
+  const { lightLevel, LIGHT_PATTERNS } = await import("../src/lighting.ts");
+  assert.equal(LIGHT_PATTERNS.length, 4);
+  for (const { id } of LIGHT_PATTERNS) {
+    for (let i = 0; i < 9; i++)
+      for (let t = 0; t < 25; t += 0.1) {
+        const a = lightLevel(id, t, i),
+          b = lightLevel(id, t + 0.01, i);
+        assert.ok(a >= 0 && a <= 1);
+        assert.ok(Math.abs(a - b) < 0.015);
+        assert.equal(lightLevel(id, t, i, true), 0.78);
+      }
+  }
+  assert.equal(lightLevel("all", 2, 0), lightLevel("all", 2, 5));
+  assert.notEqual(lightLevel("alternate", 2, 0), lightLevel("alternate", 2, 1));
+  assert.notEqual(lightLevel("random", 2, 0), lightLevel("random", 2, 1));
+  assert.ok(lightLevel("gentle", 1, 8) >= 0.65);
+  const p = parsePreferences('{"lightPattern":"alternate"}');
+  assert.equal(p.lightPattern, "alternate");
+  assert.equal(
+    parsePreferences('{"lightPattern":"fake"}').lightPattern,
+    "gentle",
+  );
 });

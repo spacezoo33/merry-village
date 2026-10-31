@@ -7,3 +7,5 @@ These images were generated for this project with OpenAI image generation using 
 - `miniature-atlas.png`, `special-buildings.png`, `train-directions.png`: original assets preserved byte for byte; no longer imported by the product edition's runtime. Old `art.ts`/`layouts.ts` remain available as legacy source, not the active product layout.
 
 Photos composite the same product plate with a real current 3D framebuffer snapshot. Building windows and lantern illumination baked into the plates cannot be fully switched off; live decorative glow layers can. Fully independent architectural relighting would require unlit model/material assets.
+
+- `fir-sprig.png`: new 1280×1280 alpha texture generated for this project (source `exec-98cdabc8-e3e8-4d6b-9315-473b9bb814c8.png`). Repeated on crossed needle cards distributed in 3D space, not a single tree poster. No external image host or copied product image is shipped. Existing architecture atlas/background and all original images remain untouched.

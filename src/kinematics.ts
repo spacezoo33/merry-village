@@ -35,23 +35,23 @@ export function pose(angle: number, length: number): Pose {
     },
   };
 }
-export function consist(angle: number): Pose[] {
-  const cars = [pose(angle, CAR_LENGTHS[0])];
+export function consist(angle: number, scale = 1): Pose[] {
+  const cars = [pose(angle, CAR_LENGTHS[0] * scale)];
   for (let i = 1; i < CAR_LENGTHS.length; i++) {
     const lead = cars[i - 1]!;
-    let low = (CAR_LENGTHS[i - 1]! + CAR_LENGTHS[i]!) / (2 * RADIUS),
+    let low = ((CAR_LENGTHS[i - 1]! + CAR_LENGTHS[i]!) * scale) / (2 * RADIUS),
       high = low + 0.2;
     for (let k = 0; k < 40; k++) {
       const d = (low + high) / 2,
-        p = pose(lead.angle - d, CAR_LENGTHS[i]!);
+        p = pose(lead.angle - d, CAR_LENGTHS[i]! * scale);
       if (
         Math.hypot(lead.rear.x - p.front.x, lead.rear.z - p.front.z) >
-        COUPLER_LENGTH
+        COUPLER_LENGTH * scale
       )
         high = d;
       else low = d;
     }
-    cars.push(pose(lead.angle - (low + high) / 2, CAR_LENGTHS[i]!));
+    cars.push(pose(lead.angle - (low + high) / 2, CAR_LENGTHS[i]! * scale));
   }
   return cars;
 }

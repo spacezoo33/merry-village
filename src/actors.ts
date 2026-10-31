@@ -1,18 +1,19 @@
+import { batchStatic } from "./model-batch";
 import * as T from "three";
+import { addFirBranches } from "./fir";
+import { buildVintageCar } from "./train-model";
+import { railCalibration, PORTAL_ANGLE } from "./rail-profiles";
+import type { VillageId } from "./catalog";
+import { lightLevel, type LightPattern } from "./lighting";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import {
-  consist,
-  TRAIN_SECONDS,
-  TREE_SECONDS,
-  RADIUS,
-  TUNNEL_Z,
-  TRACK_START,
-} from "./kinematics";
+import { consist, TREE_SECONDS, RADIUS } from "./kinematics";
 export type ActorSettings = {
   motion: boolean;
   lights: boolean;
   gold: boolean;
   hidden: boolean;
+  pattern: LightPattern;
 };
 const bronze = new T.MeshStandardMaterial({
   color: 0xd4a35a,
@@ -58,28 +59,20 @@ function box(
 ) {
   return mesh(new RoundedBoxGeometry(w, h, d, 2, r), m, p, x, y, z);
 }
-function rod(
-  p: T.Object3D,
-  a: T.Vector3,
-  b: T.Vector3,
-  r: number,
-  m: T.Material,
-) {
-  const o = mesh(new T.CylinderGeometry(r, r, a.distanceTo(b), 8), m, p);
-  o.position.copy(a).add(b).multiplyScalar(0.5);
-  o.quaternion.setFromUnitVectors(
-    new T.Vector3(0, 1, 0),
-    b.clone().sub(a).normalize(),
-  );
-  return o;
-}
 export class Actors {
   private renderer: T.WebGLRenderer;
   private world = new T.Scene();
   private camera = new T.OrthographicCamera(-1.55, 1.55, 1.83, -1.27, 0.01, 40);
   private tree = new T.Group();
   private cars: T.Group[] = [];
+  private wheels: T.Group[] = [];
+  private calibration;
+  private environment: T.WebGLRenderTarget;
+  ready: Promise<void> = Promise.resolve();
+  private dead = false;
   private links: T.Mesh[] = [];
+  private ledWeights = new Float32Array(75);
+  private ledAttribute = new T.BufferAttribute(this.ledWeights, 1);
   private bulbs: { material: T.MeshStandardMaterial; phase: number }[] = [];
   private raf = 0;
   private previous = 0;
@@ -91,6 +84,7 @@ export class Actors {
     lights: true,
     gold: false,
     hidden: false,
+    pattern: "gentle",
   };
   private reduced = matchMedia("(prefers-reduced-motion: reduce)");
   private observer: ResizeObserver;
@@ -98,7 +92,8 @@ export class Actors {
   private lost = false;
   private textures: T.Texture[] = [];
   private host: HTMLElement;
-  constructor(host: HTMLElement) {
+  constructor(host: HTMLElement, village: VillageId) {
+    this.calibration = railCalibration(village);
     this.host = host;
     this.renderer = new T.WebGLRenderer({
       alpha: true,
@@ -111,16 +106,33 @@ export class Actors {
     this.renderer.toneMapping = T.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.25;
     host.append(this.renderer.domElement);
-    this.camera.position.set(0, 10, 17);
+    const p = this.calibration;
+    this.camera.left = p.left;
+    this.camera.right = p.left + p.spanX;
+    this.camera.top = p.top;
+    this.camera.bottom = p.top - p.spanY;
+    this.camera.position.set(
+      0,
+      Math.sin(p.elevation) * 20,
+      Math.cos(p.elevation) * 20,
+    );
     this.camera.lookAt(0, 0, 0);
     this.camera.updateProjectionMatrix();
-    this.world.add(new T.HemisphereLight(0xffedcf, 0x564938, 2.8));
-    const key = new T.DirectionalLight(0xffd49c, 4);
+    this.world.add(new T.HemisphereLight(0xffedcf, 0x564938, 1.8));
+    const key = new T.DirectionalLight(0xffd49c, 2.5);
     key.position.set(-3, 7, 6);
     this.world.add(key);
     const rim = new T.DirectionalLight(0x9bbdff, 1.2);
     rim.position.set(2, 4, -3);
     this.world.add(rim);
+    const pmrem = new T.PMREMGenerator(this.renderer),
+      room = new RoomEnvironment();
+    this.environment = pmrem.fromScene(room, 0.05);
+    this.world.environment = this.environment.texture;
+    this.world.environmentIntensity = 0.65;
+    pmrem.dispose();
+    room.dispose();
+    this.renderer.toneMappingExposure = 1.05;
     this.buildTree();
     this.buildTrain();
     this.buildTrack();
@@ -155,86 +167,35 @@ export class Actors {
   };
   private buildTree() {
     const tree = this.tree;
-    tree.position.set(0, 0.145, 0);
+    tree.position.set(0, this.calibration.treeY, 0);
     this.world.add(tree);
     mesh(new T.CylinderGeometry(0.045, 0.06, 0.18, 12), bronze, tree, 0, 0.04);
-    // Hundreds of individually modelled sculpted evergreen sprays: true 3D on every side.
-    const textureCanvas = document.createElement("canvas");
-    textureCanvas.width = 128;
-    textureCanvas.height = 128;
-    const tc = textureCanvas.getContext("2d")!;
-    tc.fillStyle = "#376141";
-    tc.fillRect(0, 0, 128, 128);
-    for (let i = 0; i < 230; i++) {
-      const x = (i * 73) % 128,
-        y = (i * 43) % 128;
-      tc.strokeStyle = i % 3 ? "#24462b" : "#63835c";
-      tc.lineWidth = 1;
-      tc.beginPath();
-      tc.moveTo(x, y);
-      tc.lineTo(x + 5 + (i % 5), y - 9);
-      tc.stroke();
-    }
-    const needles = new T.CanvasTexture(textureCanvas);
-    this.textures.push(needles);
-    needles.colorSpace = T.SRGBColorSpace;
-    const pineMaterial = new T.MeshStandardMaterial({
-      map: needles,
-      roughness: 0.9,
-      color: 0xa7bd8f,
-    });
-    const foliage = new T.InstancedMesh(
-      new T.SphereGeometry(1, 10, 8),
-      pineMaterial,
-      420,
-    );
-    const caps = new T.InstancedMesh(new T.SphereGeometry(1, 8, 6), snow, 140);
-    const dummy = new T.Object3D();
-    let n = 0,
-      s = 0;
-    for (let tier = 0; tier < 10; tier++) {
-      const y = 0.12 + tier * 0.105,
-        radius = 0.36 * (1 - tier / 11);
-      for (let branch = 0; branch < 14; branch++) {
-        const a = (branch * Math.PI * 2) / 14 + tier * 0.38;
-        for (let spray = 0; spray < 3; spray++) {
-          const f = 0.45 + spray * 0.23;
-          dummy.position.set(
-            Math.cos(a) * radius * f,
-            y + 0.025 * (2 - spray),
-            Math.sin(a) * radius * f,
-          );
-          dummy.rotation.set(0, -a, 0.05);
-          dummy.scale.set(
-            radius * 0.43,
-            0.031 + (0.006 * (10 - tier)) / 10,
-            0.036,
-          );
-          dummy.updateMatrix();
-          foliage.setMatrixAt(n++, dummy.matrix);
-          if (spray === 2) {
-            dummy.position.y += 0.037;
-            dummy.scale.set(radius * 0.4, 0.021, 0.04);
-            dummy.updateMatrix();
-            caps.setMatrixAt(s++, dummy.matrix);
-          }
+    const fir = addFirBranches(tree);
+    this.textures.push(fir.texture);
+    this.ready = fir.ready
+      .then(() => {
+        if (!this.dead) {
+          this.host.dataset.ready = "true";
+          this.draw();
         }
-      }
-    }
-    tree.add(foliage, caps);
+      })
+      .catch(() => {
+        if (!this.dead)
+          this.host.dataset.unavailable = "트리 질감을 불러오지 못했어요";
+      });
     const ball = new T.SphereGeometry(0.024, 12, 10);
     const colors = [0xc92116, 0xd9aa4e, 0xb63225];
+    const ornamentMaterials = colors.map(
+      (color) =>
+        new T.MeshStandardMaterial({ color, metalness: 0.72, roughness: 0.28 }),
+    );
     for (let i = 0; i < 65; i++) {
       const y = 0.14 + (i / 65) * 0.96,
         a = i * 2.3999,
-        r = 0.448 * (1 - y / 1.33);
+        r = 0.42 * (1 - y / 1.32) ** 0.78;
       mesh(
         ball,
-        new T.MeshStandardMaterial({
-          color: colors[i % 3],
-          metalness: 0.72,
-          roughness: 0.28,
-        }),
+        ornamentMaterials[i % 3]!,
         tree,
         Math.cos(a) * r,
         y,
@@ -245,8 +206,9 @@ export class Actors {
     for (let i = 0; i < 14; i++) {
       const y = 0.24 + (i % 5) * 0.16,
         a = i * 2.4,
-        r = 0.46 * (1 - y / 1.33),
+        r = 0.435 * (1 - y / 1.32) ** 0.78,
         bow = new T.Group();
+      bow.scale.setScalar(1.25);
       bow.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
       bow.rotation.y = -a + Math.PI / 2;
       for (const sign of [-1, 1]) {
@@ -269,7 +231,7 @@ export class Actors {
     for (let i = 0; i <= 160; i++) {
       const y = 0.12 + i / 160,
         a = (i / 160) * Math.PI * 10,
-        r = 0.452 * (1 - y / 1.33);
+        r = 0.43 * (1 - y / 1.32) ** 0.78;
       ribbonPoints.push(new T.Vector3(Math.cos(a) * r, y, Math.sin(a) * r));
     }
     mesh(
@@ -283,26 +245,45 @@ export class Actors {
       bronze,
       tree,
     );
+    const leds = new T.InstancedMesh(
+      new T.SphereGeometry(0.012, 7, 5),
+      new T.MeshStandardMaterial({ roughness: 0.3 }),
+      75,
+    );
+    const ledPositions = new Float32Array(225),
+      ledColors = new Float32Array(225),
+      dummy = new T.Object3D();
     for (let i = 0; i < 75; i++) {
       const y = 0.14 + (i / 75) * 0.98,
         a = (i / 75) * Math.PI * 10,
-        r = 0.456 * (1 - y / 1.33);
-      const m = new T.MeshStandardMaterial({
-        color: [0xffd27b, 0xa62d1e, 0x5b9c44][i % 3],
-        emissive: [0xffb536, 0xe32310, 0x4aaa3b][i % 3],
-        emissiveIntensity: 1,
-        roughness: 0.3,
-      });
-      mesh(
-        new T.SphereGeometry(0.015, 8, 6),
-        m,
-        tree,
-        Math.cos(a) * r,
-        y,
-        Math.sin(a) * r,
-      );
-      this.bulbs.push({ material: m, phase: i * 2.37 });
+        r = 0.438 * (1 - y / 1.32) ** 0.78;
+      dummy.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+      dummy.updateMatrix();
+      leds.setMatrixAt(i, dummy.matrix);
+      const color = new T.Color([0xffb63e, 0xc42e18, 0x51a447][i % 3]);
+      leds.setColorAt(i, color);
+      dummy.position.toArray(ledPositions, i * 3);
+      color.toArray(ledColors, i * 3);
     }
+    tree.add(leds);
+    const geometry = new T.BufferGeometry();
+    geometry.setAttribute("position", new T.BufferAttribute(ledPositions, 3));
+    geometry.setAttribute("tint", new T.BufferAttribute(ledColors, 3));
+    geometry.setAttribute("level", this.ledAttribute);
+    const points = new T.Points(
+      geometry,
+      new T.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: T.AdditiveBlending,
+        uniforms: { size: { value: 5 * Math.min(devicePixelRatio, 1.75) } },
+        vertexShader:
+          "attribute vec3 tint; attribute float level; varying vec3 vTint; varying float vLevel; uniform float size; void main(){ vTint=tint;vLevel=level;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);gl_PointSize=size; }",
+        fragmentShader:
+          "varying vec3 vTint;varying float vLevel;void main(){float r=length(gl_PointCoord-vec2(.5))*2.;float a=pow(max(0.,1.-r),2.);gl_FragColor=vec4(vTint*vLevel,a*min(1.,vLevel));}",
+      }),
+    );
+    tree.add(points);
     const shape = new T.Shape();
     for (let i = 0; i < 10; i++) {
       const a = Math.PI / 2 + (i * Math.PI) / 5,
@@ -338,104 +319,14 @@ export class Actors {
       material: star.material as T.MeshStandardMaterial,
       phase: 0,
     });
+    batchStatic(tree, new Set([star]));
   }
   private buildTrain() {
-    const warm = new T.MeshStandardMaterial({
-      color: 0xffde89,
-      emissive: 0xffae38,
-      emissiveIntensity: 0.65,
-      roughness: 0.4,
-    });
     for (let i = 0; i < 3; i++) {
-      const car = new T.Group();
-      this.cars.push(car);
-      this.world.add(car);
-      box(car, i === 0 ? 0.32 : 0.28, 0.025, 0.12, dark, 0, 0.045);
-      if (i === 0) {
-        const boiler = mesh(
-          new T.CylinderGeometry(0.052, 0.052, 0.19, 20),
-          green,
-          car,
-          0.04,
-          0.105,
-        );
-        boiler.rotation.z = Math.PI / 2;
-        for (const x of [-0.02, 0.055, 0.12]) {
-          const band = mesh(
-            new T.TorusGeometry(0.053, 0.003, 6, 20),
-            bronze,
-            car,
-            x,
-            0.105,
-          );
-          band.rotation.y = Math.PI / 2;
-        }
-        box(car, 0.1, 0.13, 0.125, red, -0.09, 0.125);
-        box(car, 0.13, 0.018, 0.15, dark, -0.09, 0.2);
-        for (const z of [-0.064, 0.064])
-          box(car, 0.045, 0.052, 0.003, warm, -0.09, 0.145, z, 0.003);
-        mesh(
-          new T.CylinderGeometry(0.016, 0.023, 0.07, 12),
-          dark,
-          car,
-          0.095,
-          0.177,
-        );
-        mesh(
-          new T.CylinderGeometry(0.026, 0.026, 0.012, 12),
-          bronze,
-          car,
-          0.095,
-          0.215,
-        );
-        const head = mesh(
-          new T.CylinderGeometry(0.032, 0.032, 0.014, 16),
-          warm,
-          car,
-          0.145,
-          0.105,
-        );
-        head.rotation.z = Math.PI / 2;
-        box(car, 0.025, 0.03, 0.16, red, 0.162, 0.045);
-      } else {
-        box(car, 0.25, 0.11, 0.12, red, 0, 0.11);
-        box(car, 0.28, 0.025, 0.145, green, 0, 0.18);
-        box(car, 0.25, 0.014, 0.13, snow, 0, 0.199);
-        for (const x of [-0.075, 0, 0.075])
-          for (const z of [-0.061, 0.061]) {
-            box(car, 0.049, 0.052, 0.004, bronze, x, 0.115, z, 0.002);
-            box(car, 0.039, 0.044, 0.005, warm, x, 0.115, z * 1.01, 0.002);
-          }
-      }
-      for (const x of [-0.1, 0.085])
-        for (const z of [-0.07, 0.07]) {
-          const w = mesh(
-            new T.CylinderGeometry(0.033, 0.033, 0.014, 16),
-            dark,
-            car,
-            x,
-            0.032,
-            z,
-          );
-          w.rotation.x = Math.PI / 2;
-          const rim = mesh(
-            new T.TorusGeometry(0.027, 0.003, 5, 16),
-            bronze,
-            car,
-            x,
-            0.032,
-            z * 1.12,
-          );
-          rim.rotation.y = 0;
-        }
-      for (const z of [-0.079, 0.079])
-        rod(
-          car,
-          new T.Vector3(-0.1, 0.032, z),
-          new T.Vector3(0.085, 0.032, z),
-          0.004,
-          bronze,
-        );
+      const model = buildVintageCar(i === 0);
+      this.cars.push(model.group);
+      this.wheels.push(...model.wheels);
+      this.world.add(model.group);
     }
     for (let i = 0; i < 2; i++)
       this.links.push(
@@ -443,10 +334,13 @@ export class Actors {
       );
     // Rear half is inside the opaque raised village/tunnel. Clip in world space,
     // progressively across each vehicle (not whole-car visibility popping).
-    const tunnel = new T.Plane(new T.Vector3(0, 0, 1), -TUNNEL_Z);
+    const tunnel = new T.Plane(
+      new T.Vector3(0, 0, 1),
+      -this.calibration.tunnelZ,
+    );
     for (const car of [...this.cars, ...this.links])
       car.traverse((o) => {
-        if (o instanceof T.Mesh) {
+        if (o instanceof T.Mesh || o instanceof T.Points) {
           const original = o.material as T.MeshStandardMaterial;
           const m = original.clone();
           m.clippingPlanes = [tunnel];
@@ -460,9 +354,11 @@ export class Actors {
         { length: 97 },
         (_, i) =>
           new T.Vector3(
-            r * Math.cos(TRACK_START + (i / 96) * (Math.PI - 2 * TRACK_START)),
+            r *
+              Math.cos(PORTAL_ANGLE + (i / 96) * (Math.PI - 2 * PORTAL_ANGLE)),
             0.008,
-            r * Math.sin(TRACK_START + (i / 96) * (Math.PI - 2 * TRACK_START)),
+            r *
+              Math.sin(PORTAL_ANGLE + (i / 96) * (Math.PI - 2 * PORTAL_ANGLE)),
           ),
       );
       mesh(
@@ -471,23 +367,22 @@ export class Actors {
         this.world,
       );
     }
-    for (let i = 0; i <= 64; i++) {
-      const a = TRACK_START + (i / 64) * (Math.PI - 2 * TRACK_START),
-        r = RADIUS;
-      const sleeper = box(
-        this.world,
-        0.014,
-        0.007,
-        0.18,
+    const ties = new T.InstancedMesh(
+        new RoundedBoxGeometry(0.014, 0.007, 0.18, 1, 0.002),
         dark,
-        r * Math.cos(a),
-        0,
-        r * Math.sin(a),
-        0.002,
-      );
-      sleeper.rotation.y = -a - Math.PI / 2;
+        65,
+      ),
+      dummy = new T.Object3D();
+    for (let i = 0; i <= 64; i++) {
+      const a = PORTAL_ANGLE + (i / 64) * (Math.PI - 2 * PORTAL_ANGLE);
+      dummy.position.set(RADIUS * Math.cos(a), 0, RADIUS * Math.sin(a));
+      dummy.rotation.y = -a - Math.PI / 2;
+      dummy.updateMatrix();
+      ties.setMatrixAt(i, dummy.matrix);
     }
+    this.world.add(ties);
   }
+
   update(settings: ActorSettings) {
     this.settings = settings;
     this.previous = 0;
@@ -521,10 +416,13 @@ export class Actors {
     if (this.lost) return;
     this.tree.rotation.y = (this.elapsed / TREE_SECONDS) * Math.PI * 2 + 0.17;
     const poses = consist(
-      0.85 + (Math.max(0, this.elapsed - 0.65) / TRAIN_SECONDS) * Math.PI * 2,
+      0.85 +
+        (Math.max(0, this.elapsed - 0.65) / this.calibration.lap) * Math.PI * 2,
+      this.calibration.scale,
     );
     poses.forEach((p, i) => {
       this.cars[i]!.position.set(p.x, 0.014, p.z);
+      this.cars[i]!.scale.setScalar(this.calibration.scale);
       this.cars[i]!.rotation.y = p.yaw;
     });
     this.links.forEach((link, i) => {
@@ -539,16 +437,60 @@ export class Actors {
         bv.sub(av).normalize(),
       );
     });
-    for (const b of this.bulbs)
-      b.material.emissiveIntensity = this.settings.lights
-        ? (this.settings.gold ? 2.2 : 1.1) +
-          Math.sin(this.lightTime * 0.8 + b.phase) * 0.45
+    this.wheels.forEach((w) => {
+      w.rotation.z =
+        (-Math.max(0, this.elapsed - 0.65) *
+          Math.PI *
+          2 *
+          (RADIUS - w.position.z * this.calibration.scale)) /
+        (this.calibration.lap * 0.035 * this.calibration.scale);
+    });
+    for (let i = 0; i < 75; i++)
+      this.ledWeights[i] = this.settings.lights
+        ? lightLevel(
+            this.settings.pattern,
+            this.lightTime,
+            i,
+            this.reduced.matches,
+          ) * (this.settings.gold ? 3.3 : 2.5)
         : 0;
+    this.ledAttribute.needsUpdate = true;
+    this.bulbs.forEach(
+      (b) =>
+        (b.material.emissiveIntensity = this.settings.lights
+          ? this.ledWeights[0]!
+          : 0),
+    );
+    for (const [i, bulb] of [
+      ...this.host.parentElement!.querySelectorAll<HTMLElement>(
+        ".architectural-lights i",
+      ),
+    ].entries()) {
+      const level = this.settings.lights
+        ? lightLevel(
+            this.settings.pattern,
+            this.lightTime,
+            i,
+            this.reduced.matches,
+          )
+        : 0;
+      bulb.style.opacity = String(level);
+      bulb.style.setProperty("--intensity", String(level));
+    }
     this.renderer.render(this.world, this.camera);
     this.host.dataset.elapsed = this.elapsed.toFixed(3);
     this.host.dataset.treeAngle = this.tree.rotation.y.toFixed(5);
     this.host.dataset.trainAngle = poses[0]!.angle.toFixed(5);
+    this.host.dataset.pattern = this.settings.pattern;
+    this.host.dataset.bulbLevels = JSON.stringify(
+      [...this.ledWeights.slice(0, 6)].map((v) => Number(v.toFixed(3))),
+    );
+    this.host.dataset.drawCalls = String(this.renderer.info.render.calls);
+    this.host.dataset.village = JSON.stringify(this.calibration);
     this.host.dataset.reduced = String(this.reduced.matches);
+  }
+  get lightingTime() {
+    return this.lightTime;
   }
   snapshot(): HTMLCanvasElement {
     this.draw();
@@ -559,6 +501,7 @@ export class Actors {
     return copy;
   }
   destroy() {
+    this.dead = true;
     cancelAnimationFrame(this.raf);
     this.observer.disconnect();
     this.reduced.removeEventListener("change", this.onReduce);
@@ -573,7 +516,7 @@ export class Actors {
     const geometries = new Set<T.BufferGeometry>(),
       materials = new Set<T.Material>();
     this.world.traverse((o) => {
-      if (o instanceof T.Mesh) {
+      if (o instanceof T.Mesh || o instanceof T.Points) {
         geometries.add(o.geometry);
         materials.add(o.material);
       }
@@ -583,7 +526,9 @@ export class Actors {
       if (!shared.includes(m as T.MeshStandardMaterial)) m.dispose();
     });
     this.textures.forEach((t) => t.dispose());
+    this.environment.dispose();
     this.renderer.dispose();
+    this.renderer.forceContextLoss();
     this.host.replaceChildren();
   }
 }

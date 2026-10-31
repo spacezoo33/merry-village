@@ -13,27 +13,13 @@
 @media(max-width:350px){#app{padding-top:max(12px,env(safe-area-inset-top))}.app-header{padding-right:48px;padding-left:0}.eyebrow{font-size:6px;letter-spacing:1.5px}.subtitle{font-size:10px}.controls{gap:7px;top:-102px}.control{min-height:57px;font-size:8px}.decoration-menu{gap:5px}.decoration-button{border-radius:16px;min-height:73px}.menu-art,.menu-art .sprite{height:39px}.decoration-label{font-size:11px}.selection-note,.music-note{font-size:9px}.decoration-section{margin-top:-22px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}.snowfall i{top:var(--y);opacity:.65}}
 
-/* Each wheel anchor travels independently on the same measured rail. */
-.train-unit{position:absolute;left:0;top:0;width:19.8%;aspect-ratio:1;transform-origin:0 0;pointer-events:none;will-change:transform}
-.train-unit.wagon{width:18%}
-.train-body{position:relative;width:100%;height:100%;transform:translate(-50%,-80.55555556%)}
-.train-frame{position:absolute;inset:0;opacity:0;transition:opacity .14s linear}
-.train-frame.active{opacity:1}
-.train-frame svg{display:block;width:100%;height:100%;overflow:hidden}
-.train-selected .train-body{filter:drop-shadow(0 0 3px #ffdc87)}
-.train-status{font-size:8px;line-height:1.2;padding:2px 5px;border-radius:8px;background:#6b472b;color:#fff1c9;white-space:nowrap}
-[data-running=true] .train-status{background:#41603c}
 .ambient-paused .snowfall i,.ambient-paused .tree-lights i{animation-play-state:paused}
 
-/* Ground-foot depth ordering: the train passes behind each object until its bogies are in front. */
+/* Preserve the established miniature composition with a static train. */
 .village-buildings{display:contents}
 .village-buildings.selected .scene-object{filter:drop-shadow(0 0 5px #ffce7b90)}
 .object-church{z-index:578}.object-house-back{z-index:640}.object-house-left{z-index:685}.object-house-right{z-index:712}
 .object-tree{z-index:700}.object-santa{z-index:735}.object-reindeer{z-index:730}.object-snowman{z-index:840}
 .object-pine-back{z-index:584}.object-pine-left{z-index:816}.object-pine-right{z-index:814}
 .tree-lights{z-index:701}.snowfall{z-index:1300}
-.train-chassis,.train-coupler{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
-.train-chassis path,.train-coupler path{fill:none;stroke-linecap:round}
-.chassis-outline{stroke:#34281d;stroke-width:5}.chassis-metal{stroke:#846e46;stroke-width:1.5}
-.coupler-outline{stroke:#30271e;stroke-width:5}.coupler-metal{stroke:#c09c54;stroke-width:1.8}
-.train-coupler circle{fill:#8e713e;stroke:#34281d;stroke-width:1.3}
+.object-train{width:56%;left:15%;top:50.5%;z-index:880}

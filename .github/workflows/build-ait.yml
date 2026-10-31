@@ -1,0 +1,46 @@
+name: Build release AIT (manual only)
+
+# Final release only. No push, pull_request, schedule or workflow_run triggers.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_release:
+        description: '앱 개발이 최종 완료되었으며 공식 AIT 생성을 요청합니다'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: inputs.confirm_release == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout selected release commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Log release identity
+        run: |
+          echo "Release commit: $GITHUB_SHA"
+          echo "Run: $GITHUB_RUN_ID / attempt $GITHUB_RUN_ATTEMPT"
+          git rev-parse HEAD
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Explicit final release build and validation
+        run: npm run release:ait
+      - name: Upload official AIT ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: merry-village-ait-${{ github.run_number }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: merry-village.ait
+          if-no-files-found: error
+          retention-days: 14

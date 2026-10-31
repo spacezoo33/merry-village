@@ -1,8 +1,8 @@
-name: Build web preview and AIT
+name: Build web preview
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/elliptical-train-ride]
   pull_request:
   workflow_dispatch:
 
@@ -10,51 +10,32 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Checkout triggering commit
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-
-      - name: Set up supported Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
-
       - name: Log source and build identity
         run: |
           echo "Commit: $GITHUB_SHA"
           echo "Run: $GITHUB_RUN_ID / number $GITHUB_RUN_NUMBER / attempt $GITHUB_RUN_ATTEMPT"
           git rev-parse HEAD
-          node --version
-          npm --version
-
       - name: Install locked dependencies
         run: npm ci
-
-      - name: TypeScript check
-        run: npm run typecheck
-
-      - name: Test build validation
-        run: npm test
-
-      - name: Build web preview
-        run: npm run build:web
-
-      - name: Build official AIT package
-        run: npm run build:ait
-
-      - name: Verify both outputs and embedded appName
-        run: npm run verify:build
-
+      - name: Check, test, build and verify web only
+        run: npm run build
       - name: Upload web preview ZIP
         uses: actions/upload-artifact@v4
         with:
@@ -62,18 +43,34 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 14
-
-      - name: Upload official AIT ZIP
-        uses: actions/upload-artifact@v4
+      - name: Prepare Pages artifact from the development branch
+        if: vars.ENABLE_PAGES == 'true' && github.ref == 'refs/heads/feat/elliptical-train-ride' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: merry-village-ait-${{ github.run_number }}-${{ github.run_attempt }}-${{ github.sha }}
-          path: merry-village.ait
-          if-no-files-found: error
-          retention-days: 14
-
+          path: dist/
       - name: Write download instructions
         run: |
-          echo "### Merry Village build" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Merry Village web preview" >> "$GITHUB_STEP_SUMMARY"
           echo "Commit: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
-          echo "Web and AIT validated independently. Download the two ZIPs from this run's Artifacts section." >> "$GITHUB_STEP_SUMMARY"
-          echo "The AIT ZIP contains merry-village.ait. Console upload/device testing is a separate step." >> "$GITHUB_STEP_SUMMARY"
+          echo "Download the web ZIP from this run's Artifacts section. No release package was generated." >> "$GITHUB_STEP_SUMMARY"
+
+  pages:
+    needs: build
+    if: vars.ENABLE_PAGES == 'true' && github.ref == 'refs/heads/feat/elliptical-train-ride' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: merry-village-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Read existing Pages configuration
+        uses: actions/configure-pages@v5
+      - name: Deploy development web preview
+        id: deployment
+        uses: actions/deploy-pages@v4

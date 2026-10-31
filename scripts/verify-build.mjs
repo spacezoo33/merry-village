@@ -1,22 +1,15 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { AppsInTossBundle } from '@apps-in-toss/ait-format';
+import { APP_NAME, verifyWebBuild } from './verify-web.mjs';
 
-export const APP_NAME = 'merry-village';
-
+// Used only by the explicitly requested final AIT release workflow.
 export async function verifyBuild(root, expectedCommit) {
-  const { default: config } = await import(pathToFileURL(join(root, 'apps-in-toss.config.ts')).href);
-  assert.equal(config.appName, APP_NAME, 'Config appName mismatch');
-  assert.equal(config.webBundleDir, 'dist', 'Unexpected web bundle directory');
-  const dist = join(root, config.webBundleDir);
-  const info = JSON.parse(await readFile(join(dist, 'build-info.json'), 'utf8'));
-  assert.equal(info.appName, APP_NAME, 'Web appName mismatch');
-  assert.equal(info.commit, expectedCommit, 'Stale web build: commit mismatch');
-  assert.ok((await stat(join(dist, 'index.html'))).size > 0, 'Missing/empty web entry');
-
+  const info = await verifyWebBuild(root, expectedCommit);
+  const dist = join(root, 'dist');
   const artifactPath = join(root, `${APP_NAME}.ait`);
   const artifact = await readFile(artifactPath);
   assert.ok(artifact.length > 0, 'Empty AIT file');

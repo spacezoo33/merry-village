@@ -4,16 +4,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { AppsInTossBundle } from '@apps-in-toss/ait-format';
-import { verifyBuild } from '../scripts/verify-build.mjs';
+import { verifyBuild } from '../../scripts/verify-build.mjs';
 
 async function fixture(t, appName = 'merry-village') {
   const root = await mkdtemp(join(tmpdir(), 'merry-village-test-'));
   t.after(() => rm(root, { recursive: true, force: true }));
-  await mkdir(join(root, 'dist'));
+  await mkdir(join(root, 'dist', 'assets'), { recursive: true });
   await writeFile(join(root, 'apps-in-toss.config.ts'),
     'export default { appName: "merry-village", webBundleDir: "dist" };');
   const files = {
-    'index.html': '<!doctype html><h1>메리빌리지</h1>',
+    'index.html': '<!doctype html><link rel="stylesheet" href="./assets/main.css"><h1>메리빌리지</h1><script type="module" src="./assets/main.js"></script>',
+    'assets/main.js': 'console.log("Merry Village");',
+    'assets/main.css': 'body { margin: 0; }',
     'build-info.json': JSON.stringify({ appName: 'merry-village', commit: 'current' }),
   };
   const writer = AppsInTossBundle.writer({ appName });

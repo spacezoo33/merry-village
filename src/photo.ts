@@ -1,139 +1,102 @@
-import { ART, background } from "./art";
-import { villageObjects } from "./layouts";
-import { villageById, type NightId, type VillageId } from "./catalog";
+import background from "./assets/christmas-room.png";
+import { productAtlas, productCrop } from "./product";
+import type { NightId, VillageId } from "./catalog";
 const images = new Map<string, Promise<HTMLImageElement>>();
-function load(src: string): Promise<HTMLImageElement> {
+async function load(src: string) {
   if (!images.has(src))
     images.set(
       src,
       new Promise((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = () => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = () => {
           images.delete(src);
-          reject(new Error("사진에 사용할 이미지를 불러오지 못했어요."));
+          reject(new Error("이미지를 불러오지 못했어요"));
         };
-        image.src = src;
+        i.src = src;
       }),
     );
   return images.get(src)!;
 }
+/** UI-free photograph; copies the current actual WebGL pose rather than a stock train. */
 export async function captureVillage(
   id: VillageId,
-  night: boolean,
+  _night: boolean,
   snow: boolean,
   effect: NightId | null,
+  lights: boolean,
+  actors: HTMLCanvasElement | null,
 ): Promise<Blob> {
+  const [bg, atlas] = await Promise.all([load(background), load(productAtlas)]);
   const canvas = document.createElement("canvas");
   canvas.width = 1200;
   canvas.height = 1560;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("이 브라우저는 사진 생성을 지원하지 않아요.");
-  const objects = villageObjects(id);
-  await Promise.all([
-    load(background),
-    ...objects.map((o) => load(ART[o.asset].src)),
-  ]);
-  const bg = await load(background),
-    scale = Math.max(canvas.width / bg.width, canvas.height / bg.height);
-  ctx.drawImage(
-    bg,
-    (canvas.width - bg.width * scale) / 2,
-    (canvas.height - bg.height * scale) / 2,
-    bg.width * scale,
-    bg.height * scale,
-  );
-  ctx.fillStyle = night ? "#071127a0" : "#28120960";
-  ctx.fillRect(0, 0, 1200, 1560);
+  const c = canvas.getContext("2d");
+  if (!c) throw new Error("사진 저장을 지원하지 않아요.");
+  c.drawImage(bg, 0, 0, 1200, 1560);
+  c.fillStyle = "#1c0c0744";
+  c.fillRect(0, 0, 1200, 1560);
   if (effect === "aurora") {
-    const gradient = ctx.createLinearGradient(150, 0, 1000, 700);
-    gradient.addColorStop(0, "#57e6bf66");
-    gradient.addColorStop(0.5, "#ad8ff17a");
-    gradient.addColorStop(1, "#4ed9dc00");
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.moveTo(0, 150);
-    ctx.bezierCurveTo(400, 550, 600, 30, 1200, 300);
-    ctx.lineTo(1200, 650);
-    ctx.bezierCurveTo(600, 330, 300, 750, 0, 350);
-    ctx.fill();
+    const g = c.createLinearGradient(0, 80, 1200, 600);
+    g.addColorStop(0, "#35e5a58c");
+    g.addColorStop(0.5, "#ae74f28a");
+    g.addColorStop(1, "#76e6cb00");
+    c.fillStyle = g;
+    c.beginPath();
+    c.moveTo(0, 100);
+    c.bezierCurveTo(400, 520, 700, 40, 1200, 170);
+    c.lineTo(1200, 450);
+    c.bezierCurveTo(700, 270, 400, 760, 0, 330);
+    c.fill();
+  }
+  const [sx, sy, sw, sh] = productCrop(id);
+  c.drawImage(atlas, sx, sy, sw, sh, 0, 180, 1200, 1200);
+  if (actors) c.drawImage(actors, 0, 180, 1200, 1200);
+  if (lights) {
+    for (let i = 0; i < 12; i++) {
+      const x = [12, 20, 29, 38, 66, 76, 85, 91, 22, 78, 33, 62][i]! * 12,
+        y = 180 + [42, 46, 40, 45, 43, 45, 47, 42, 68, 69, 57, 58][i]! * 12;
+      const g = c.createRadialGradient(
+        x,
+        y,
+        0,
+        x,
+        y,
+        effect === "wishes" ? 40 : 21,
+      );
+      g.addColorStop(0, "#ffce7cb3");
+      g.addColorStop(1, "#ffb94c00");
+      c.fillStyle = g;
+      c.fillRect(x - 40, y - 40, 80, 80);
+    }
   }
   if (effect === "shooting") {
-    for (let i = 0; i < 5; i++) {
-      const x = 150 + i * 210,
-        y = 140 + (i % 3) * 92;
-      ctx.strokeStyle = "#fff2c8bb";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x - 75, y + 40);
-      ctx.stroke();
+    for (let i = 0; i < 45; i++) {
+      const x = (i * 197 + 30) % 1200,
+        y = (i * 137 + 80) % 1300;
+      c.fillStyle = i % 3 ? "#ffd48dba" : "#fff5db";
+      c.beginPath();
+      c.arc(x, y, i % 3 ? 2 : 3.5, 0, Math.PI * 2);
+      c.fill();
     }
   }
-  if (effect === "wishes") {
-    for (let i = 0; i < 16; i++) {
-      const x = (i * 197) % 1200,
-        y = 180 + ((i * 97) % 1000);
-      const g = ctx.createRadialGradient(x, y, 0, x, y, 20);
-      g.addColorStop(0, "#fff1b8cc");
-      g.addColorStop(1, "#ef9b3000");
-      ctx.fillStyle = g;
-      ctx.fillRect(x - 20, y - 20, 40, 40);
-    }
-  }
-  ctx.save();
-  ctx.translate(60, 60);
-  ctx.scale(1.08, 1.08);
-  for (const object of objects) {
-    const art = ART[object.asset],
-      image = await load(art.src),
-      [sx, sy, sw, sh] = art.crop;
-    ctx.filter = night ? "brightness(.85) saturate(.94)" : "none";
-    ctx.drawImage(
-      image,
-      sx,
-      sy,
-      sw,
-      sh,
-      object.x,
-      object.y,
-      object.width,
-      (object.width * sh) / sw,
-    );
-  }
-  ctx.filter = "none";
-  ctx.restore();
   if (snow) {
-    ctx.fillStyle = "#fff8e5cc";
-    for (let i = 0; i < 55; i++) {
-      ctx.beginPath();
-      ctx.arc(
+    c.fillStyle = "#fff9e2c2";
+    for (let i = 0; i < 48; i++) {
+      c.beginPath();
+      c.arc(
         (i * 197 + 63) % 1200,
-        180 + ((i * 137) % 1120),
-        2 + (i % 3),
+        (i * 137 + 37) % 1560,
+        1.5 + (i % 3),
         0,
         Math.PI * 2,
       );
-      ctx.fill();
+      c.fill();
     }
   }
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#fff1d0";
-  ctx.shadowColor = "#32180d";
-  ctx.shadowBlur = 8;
-  ctx.font = "bold 44px sans-serif";
-  ctx.fillText("메리빌리지", 600, 96);
-  ctx.font = "bold 30px sans-serif";
-  ctx.fillText(villageById(id).name, 600, 1450);
-  ctx.font = "18px sans-serif";
-  ctx.fillStyle = "#ead4b3";
-  ctx.fillText("MERRY VILLAGE  ·  나만의 작은 크리스마스", 600, 1495);
   return new Promise((resolve, reject) =>
     canvas.toBlob(
-      (blob) =>
-        blob
-          ? resolve(blob)
-          : reject(new Error("사진 파일을 만들지 못했어요.")),
+      (b) => (b ? resolve(b) : reject(new Error("PNG 생성 실패"))),
       "image/png",
     ),
   );

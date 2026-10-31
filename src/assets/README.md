@@ -2,11 +2,8 @@
 
 These images were generated for this project with OpenAI image generation using the user-provided miniature reference for visual direction. The reference screenshot itself is not shipped. No third-party image service/CDN is required at runtime.
 
-- `christmas-room.png`: 1024 × 1536 warm Christmas bokeh/background plate, currently used.
-- `miniature-atlas.png`: 1254 × 1254 transparent atlas containing the wooden/snow/rail plinth, cottage, church, tree, Santa, snowman, reindeer, joined toy train and pine. Independent image viewports in `src/scene.ts` compose the scene. The train is now static.
-- `special-buildings.png`: 2172 × 724 transparent atlas generated for this project: gift workshop, ice palace, gingerbread cottage. Each 724px region is a separate raster building, reused in three special layouts.
-- `train-directions.png`: 1254 × 1254 directional locomotive/wagon atlas from the retired animation. Its future use is undecided, so the original is preserved in Git. It has no runtime import and is excluded from new web/AIT inputs by Vite's dependency graph.
+- `christmas-room.png`: reused warm Christmas indoor background with candles/window.
+- `product-villages.png`: new 1536×1024 transparent 3×2 atlas, six European collectible-product architecture/base plates. Generated for this update from the final user reference. Original saved at `/workspace/generated_images/exec-42a87288-f3b2-4863-a10e-11ae9a0aba29.png`. 512px cells, bottom row viewport inset 7px to exclude the preceding cell's edge shadow. No central tree or train is baked into these plates. Static terrain, architecture, people, lanterns, snow and Merry Christmas plaque remain baked. Central tree/train/rails render separately in Three.js.
+- `miniature-atlas.png`, `special-buildings.png`, `train-directions.png`: original assets preserved byte for byte; no longer imported by the product edition's runtime. Old `art.ts`/`layouts.ts` remain available as legacy source, not the active product layout.
 
-All three pre-existing PNGs are preserved byte for byte; only the new special-building atlas is added. The retired animation is recoverable from commit d7b8cb8. No physical files were deleted merely because they are not currently imported.
-
-Rails, snow surface and nameplate remain baked into the plinth; presents and some small foliage details remain part of tree/pine/cottage artwork. These details do not yet have independent replacement assets. 2.0 selects complete village layouts; individual ornament selection and replacement are absent. Six layouts share these local images, and the PNG photo renderer uses the same region/layout data. Night mode adjusts exposure/glow, rather than physically relighting the baked windows.
+Photos composite the same product plate with a real current 3D framebuffer snapshot. Building windows and lantern illumination baked into the plates cannot be fully switched off; live decorative glow layers can. Fully independent architectural relighting would require unlit model/material assets.

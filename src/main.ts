@@ -15,6 +15,7 @@ import {
   reconcileAccess,
   passForReward,
 } from "./state";
+import { Actors } from "./actors";
 import { scene } from "./scene";
 import { icon, type Icon } from "./icons";
 import { MusicPlayer, type MusicState } from "./music";
@@ -27,6 +28,7 @@ import {
 import { captureVillage } from "./photo";
 
 const KEY = "merry-village:v2";
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 let storageWorking = true;
 let preferences = defaults();
 try {
@@ -52,6 +54,7 @@ let rewardBusy = false,
   photoBusy = false,
   photoToken = 0;
 let musicState: MusicState = "paused";
+let actors: Actors | null = null;
 let renderedVillage: VillageId | null = null;
 const app = document.querySelector<HTMLElement>("#app")!;
 const nav: { id: Sheet; label: string; icon: Icon }[] = [
@@ -61,16 +64,25 @@ const nav: { id: Sheet; label: string; icon: Icon }[] = [
   { id: "photo", label: "사진 촬영", icon: "camera" },
 ];
 app.innerHTML = `
- <header class="app-header"><div class="brand"><p class="eyebrow">YOUR LITTLE CHRISTMAS</p><h1>메리빌리지<span>2.0</span></h1></div><button class="pass-pill" data-action="pass">${icon("star")}<span id="pass-label">특별한 7일</span></button></header>
- <main class="experience"><div class="village-heading"><span class="tiny-star">✦</span><span id="village-subtitle"></span><span class="tiny-star">✦</span></div>
- <div class="hero"><div class="night-effects" aria-hidden="true"><div class="aurora"></div><div class="meteors"><i></i><i></i><i></i></div><div class="wishes">${Array.from({ length: 12 }, (_, i) => `<i style="--left:${(i * 31 + 9) % 94}%;--delay:-${i * 0.9}s;--duration:${8 + (i % 4)}s"></i>`).join("")}</div></div>
+ <main class="experience">
+ <div class="hero"><div class="night-effects" aria-hidden="true"><div class="aurora"></div><div class="starfield"><i style="--sx:7%;--sy:0%;--sd:-0.0s"></i><i style="--sx:44%;--sy:23%;--sd:-0.63s"></i><i style="--sx:81%;--sy:46%;--sd:-1.26s"></i><i style="--sx:18%;--sy:69%;--sd:-1.8900000000000001s"></i><i style="--sx:55%;--sy:2%;--sd:-2.52s"></i><i style="--sx:92%;--sy:25%;--sd:-3.15s"></i><i style="--sx:29%;--sy:48%;--sd:-3.7800000000000002s"></i><i style="--sx:66%;--sy:71%;--sd:-4.41s"></i><i style="--sx:3%;--sy:4%;--sd:-5.04s"></i><i style="--sx:40%;--sy:27%;--sd:-5.67s"></i><i style="--sx:77%;--sy:50%;--sd:-6.3s"></i><i style="--sx:14%;--sy:73%;--sd:-6.93s"></i><i style="--sx:51%;--sy:6%;--sd:-7.5600000000000005s"></i><i style="--sx:88%;--sy:29%;--sd:-8.19s"></i><i style="--sx:25%;--sy:52%;--sd:-8.82s"></i><i style="--sx:62%;--sy:75%;--sd:-9.45s"></i><i style="--sx:99%;--sy:8%;--sd:-10.08s"></i><i style="--sx:36%;--sy:31%;--sd:-10.71s"></i><i style="--sx:73%;--sy:54%;--sd:-11.34s"></i><i style="--sx:10%;--sy:77%;--sd:-11.97s"></i><i style="--sx:47%;--sy:10%;--sd:-12.6s"></i><i style="--sx:84%;--sy:33%;--sd:-13.23s"></i><i style="--sx:21%;--sy:56%;--sd:-13.86s"></i><i style="--sx:58%;--sy:79%;--sd:-14.49s"></i></div><div class="wishes">${Array.from({ length: 12 }, (_, i) => `<i style="--left:${(i * 31 + 9) % 94}%;--delay:-${i * 0.9}s;--duration:${8 + (i % 4)}s"></i>`).join("")}</div></div>
  <div id="scene-host"></div><div class="snowfall" aria-hidden="true">${Array.from({ length: 24 }, (_, i) => `<i style="--x:${(i * 37 + 11) % 100}%;--y:${(i * 23) % 96}%;--delay:-${i * 0.73}s;--duration:${8 + (i % 5)}s;--size:${2 + (i % 3)}px"></i>`).join("")}</div>
- <div class="scene-controls" role="group" aria-label="마을 분위기"><button id="snow-toggle" data-action="snow" aria-label="눈 내리기" aria-pressed="true">${icon("snow")}<span>눈</span></button><button id="night-toggle" data-action="time" aria-label="밤 분위기" aria-pressed="false">${icon("moon")}<span id="time-label">밤으로</span></button></div>
-
- </div><div class="scene-caption"><p class="scene-kicker">MY LITTLE WINTER</p><h2 id="village-name"></h2><p id="effect-name"></p></div><div class="preview-ribbon" id="preview-ribbon" hidden><span>특별 콘텐츠 미리보기 · 이용권은 지급되지 않아요</span><button data-action="exit-preview">돌아가기</button></div>
- <div class="now-playing"><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button><button class="song-detail" data-action="music"><span class="song-overline">MUSIC BOX</span><strong id="song-name"></strong><span id="music-status" role="status"></span></button><button class="song-list" data-action="music" aria-label="음악 선택">${icon("music")}</button></div>
+ <div class="scene-controls" role="group" aria-label="오르골 조작">${(
+   [
+     { id: "motion", label: "동작", symbol: "play" },
+     { id: "lights", label: "조명", symbol: "lantern" },
+     { id: "snow", label: "눈", symbol: "snow" },
+   ] as const
+ )
+   .map(
+     (c) =>
+       `<button id="${c.id}-toggle" data-action="${c.id}" aria-label="${c.label}" aria-pressed="true">${icon(c.symbol)}<span>${c.label} <b id="${c.id}-label">ON</b></span></button>`,
+   )
+   .join("")}</div>
+ <p class="graphics-status" id="graphics-status" role="status"></p>
+ </div><div class="preview-ribbon" id="preview-ribbon" hidden><span>특별 콘텐츠 미리보기 · 이용권은 지급되지 않아요</span><button data-action="exit-preview">돌아가기</button></div>
+ <div class="now-playing"><div class="song-detail"><strong id="song-name"></strong><div class="song-timeline"><input id="progress" type="range" min="0" max="100" value="0" step="0.1" aria-label="음악 재생 위치"><span id="music-time">0:00 / 0:00</span></div><span id="music-status" role="status"></span></div><button class="transport" data-action="previous" aria-label="이전 곡">${icon("play")}</button><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button><button class="transport" data-action="next" aria-label="다음 곡">${icon("play")}</button></div>
  </main><nav class="bottom-nav" aria-label="메인 메뉴">${nav.map((item) => `<button data-action="${item.id}" aria-label="${item.label}" aria-expanded="false">${icon(item.icon)}<span>${item.label}</span></button>`).join("")}</nav>
- <p class="bottom-note">작은 마을에, 오늘의 마음을 놓아두세요.</p>
  <dialog class="sheet" id="sheet" aria-labelledby="sheet-title"><div class="sheet-shell"><header class="sheet-header"><div><p class="eyebrow">MERRY VILLAGE</p><h2 id="sheet-title"></h2></div><button class="close-button" data-action="close" aria-label="닫기">${icon("close")}</button></header><div id="sheet-content"></div><p id="sheet-feedback" class="sheet-feedback" role="status" aria-live="polite"></p></div></dialog>
  <div id="toast" class="toast" role="status" aria-live="polite"></div>`;
 const dialog = app.querySelector<HTMLDialogElement>("#sheet")!;
@@ -154,43 +166,46 @@ function updateMusic(): void {
     );
 }
 function render(): void {
-  const current = display(),
-    village = villageById(current.village);
+  const current = display();
   if (renderedVillage !== current.village) {
+    actors?.destroy();
     app.querySelector("#scene-host")!.innerHTML = scene(current.village);
+    try {
+      actors = new Actors(
+        app.querySelector<HTMLElement>("#scene-host .actor-stage")!,
+      );
+      app.querySelector("#graphics-status")!.textContent = "";
+    } catch {
+      actors = null;
+      app.querySelector("#graphics-status")!.textContent =
+        "3D 그래픽을 지원하지 않아 동작을 표시할 수 없어요.";
+    }
     renderedVillage = current.village;
   }
   app.dataset.village = current.village;
   app.dataset.effect = current.effect ?? "none";
-  app.classList.toggle("night", current.night);
+  app.classList.add("night");
+  app.classList.toggle("lights-off", !preferences.lights);
+  actors?.update({
+    motion: preferences.motion,
+    lights: preferences.lights,
+    gold: current.effect === "wishes",
+    hidden: document.hidden || rewardBusy,
+  });
   app.classList.toggle("snow-off", !preferences.snow);
-  document.documentElement.classList.toggle("night-theme", current.night);
-  app.querySelector("#village-name")!.textContent = village.name;
-  app.querySelector("#village-subtitle")!.textContent = village.subtitle;
-  app.querySelector("#effect-name")!.textContent = current.effect
-    ? `${NIGHTS.find((n) => n.id === current.effect)!.name}${preview ? " · 미리보기" : ""}`
-    : preview
-      ? "특별 빌리지 미리보기"
-      : current.night
-        ? "창문마다 온기가 켜지는 밤"
-        : "당신을 위한 작은 겨울 풍경";
-  app
-    .querySelector("#snow-toggle")!
-    .setAttribute("aria-pressed", String(preferences.snow));
-  app
-    .querySelector("#night-toggle")!
-    .setAttribute("aria-pressed", String(current.night));
-  app.querySelector("#time-label")!.textContent = current.night
-    ? "낮으로"
-    : "밤으로";
-  app.querySelector("#night-toggle svg")!.outerHTML = icon(
-    current.night ? "sun" : "moon",
-  );
+  if (actors)
+    app.querySelector("#graphics-status")!.textContent = reducedMotion.matches
+      ? "움직임 줄이기 설정으로 동작이 정지되어 있어요."
+      : "";
+  for (const id of ["motion", "lights", "snow"] as const) {
+    const button = app.querySelector<HTMLButtonElement>(`#${id}-toggle`)!;
+    button.setAttribute("aria-pressed", String(preferences[id]));
+    app.querySelector(`#${id}-label`)!.textContent = preferences[id]
+      ? "ON"
+      : "OFF";
+    if (id === "motion") button.disabled = !actors;
+  }
   app.querySelector<HTMLElement>("#preview-ribbon")!.hidden = !preview;
-  app.querySelector("#pass-label")!.textContent = unlocked()
-    ? `이용권 D-${Math.max(1, Math.ceil((preferences.pass!.expiresAt - Date.now()) / 86400000))}`
-    : "특별한 7일";
-  app.querySelector(".pass-pill")!.classList.toggle("active", unlocked());
   updateMusic();
 }
 function cleanPhoto(): void {
@@ -237,7 +252,7 @@ function renderSheet(): void {
   if (sheet === "villages") {
     content.innerHTML = `<p class="sheet-description">무료 마을 3곳은 언제든 머물 수 있어요. 특별 마을은 이용권 없이도 미리 볼 수 있어요.</p><div class="village-grid">${VILLAGES.map((v) => `<button class="village-card" data-village="${v.id}" aria-pressed="${display().village === v.id}"><span class="card-art card-${v.id}">${scene(v.id)}</span><span class="card-body"><span class="card-badge ${v.premium ? "premium" : ""}">${v.premium ? icon("star") : icon("check")}${cardLabel(v.premium)}</span><strong>${v.name}</strong><span>${v.subtitle}</span></span></button>`).join("")}</div><button class="wide-button gold" data-action="pass">${icon("star")}${unlocked() ? "내 7일 이용권 확인" : "특별 빌리지 3종 · 7일 이용권"}</button>`;
   } else if (sheet === "music") {
-    content.innerHTML = `<p class="sheet-description">직접 만든 짧은 오르골 멜로디 5곡이 반복 연주돼요.<br>브라우저에서는 첫 재생에 터치가 필요할 수 있어요.</p><div class="tracks">${TRACKS.map((t, i) => `<button class="track-row" data-track="${t.id}" aria-pressed="${preferences.track === t.id}"><span class="track-number">0${i + 1}</span><span><strong>${t.name}</strong><small>${t.mood} · ${t.bpm} BPM</small></span><span class="track-note">${icon("music")}</span></button>`).join("")}</div><div class="volume-control"><label for="volume">음량</label><input id="volume" type="range" min="0" max="1" step="0.05" value="${preferences.volume}"><output id="volume-value">${Math.round(preferences.volume * 100)}%</output><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button></div><p class="small-note">외부 음원을 다운로드하지 않는 합성 오르골 연주예요.</p>`;
+    content.innerHTML = `<p class="sheet-description">서로 다른 퍼블릭 도메인 캐럴 5곡을 직접 합성한 오르골로 반복 연주해요.<br>브라우저에서는 첫 재생에 터치가 필요할 수 있어요.</p><div class="tracks">${TRACKS.map((t, i) => `<button class="track-row" data-track="${t.id}" aria-pressed="${preferences.track === t.id}"><span class="track-number">0${i + 1}</span><span><strong>${t.name}</strong><small>${t.mood} · ${t.bpm} BPM</small></span><span class="track-note">${icon("music")}</span></button>`).join("")}</div><div class="volume-control"><label for="volume">음량</label><input id="volume" type="range" min="0" max="1" step="0.05" value="${preferences.volume}"><output id="volume-value">${Math.round(preferences.volume * 100)}%</output><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button></div><p class="small-note">외부 녹음물을 사용하지 않는 자체 합성 연주예요. 악보의 Public Domain 표기와 출처는 프로젝트 음악 권리 문서에 기록했어요.</p>`;
   } else if (sheet === "nights") {
     content.innerHTML = `<p class="sheet-description">마을에 다른 빛을 켜보세요. 움직임 줄이기를 켜면 고요한 정지 효과로 보여드려요.</p><button class="basic-night" data-effect="none">${icon("moon")}<span><strong>기본 밤</strong><small>늘 무료인 따뜻한 창문 불빛</small></span>${display().effect === null ? icon("check") : ""}</button><div class="night-list">${NIGHTS.map((n) => `<button class="night-card night-${n.id}" data-effect="${n.id}" aria-pressed="${display().effect === n.id}"><span class="night-swatch">${icon(n.symbol)}</span><span><strong>${n.name}</strong><small>${n.description}</small><em>${unlocked() ? "이용 가능" : "특별 · 미리보기"}</em></span>${icon(unlocked() ? "check" : "lock")}</button>`).join("")}</div><button class="wide-button gold" data-action="pass">${icon("star")}${unlocked() ? "내 이용권 확인" : "광고 시청으로 특별한 7일"}</button>`;
   } else if (sheet === "pass") {
@@ -309,6 +324,8 @@ async function takePhoto(): Promise<void> {
       current.night,
       preferences.snow,
       current.effect,
+      preferences.lights,
+      actors?.snapshot() ?? null,
     );
     if (token !== photoToken || sheet !== "photo") return;
     photoBlob = blob;
@@ -350,7 +367,8 @@ function checkExpiry(): void {
   passWasActive = active;
   if (reconcileAccess(preferences, Date.now()) || expired) {
     preview = null;
-    if (expired) adMessage = "이용권이 만료됐어요. 무료 마을은 계속 이용할 수 있어요.";
+    if (expired)
+      adMessage = "이용권이 만료됐어요. 무료 마을은 계속 이용할 수 있어요.";
     persist();
     render();
     if (sheet) renderSheet();
@@ -361,6 +379,12 @@ function syncVisibility(): void {
   const hidden = document.hidden || rewardBusy;
   app.classList.toggle("ambient-paused", hidden);
   player.setHidden(hidden);
+  actors?.update({
+    motion: preferences.motion,
+    lights: preferences.lights,
+    gold: display().effect === "wishes",
+    hidden,
+  });
   if (!document.hidden) checkExpiry();
 }
 app.addEventListener("click", (event) => {
@@ -424,17 +448,28 @@ app.addEventListener("click", (event) => {
       persist();
       render();
       break;
-    case "time":
-      if (preview) {
-        preview.night = !preview.night;
-        if (!preview.night) preview.effect = null;
-      } else {
-        preferences.night = !preferences.night;
-        if (!preferences.night) preferences.effect = null;
-        persist();
-      }
+    case "motion":
+      preferences.motion = !preferences.motion;
+      persist();
       render();
       break;
+    case "lights":
+      preferences.lights = !preferences.lights;
+      persist();
+      render();
+      break;
+    case "previous":
+    case "next": {
+      const i = TRACKS.findIndex((t) => t.id === preferences.track);
+      preferences.track = TRACKS[
+        (i + (target.dataset.action === "next" ? 1 : 4)) % 5
+      ]!.id as TrackId;
+      player.select(preferences.track);
+      void player.play();
+      persist();
+      updateMusic();
+      break;
+    }
     case "exit-preview":
       preview = null;
       render();
@@ -480,6 +515,7 @@ dialog.addEventListener("close", () => {
     b.setAttribute("aria-expanded", "false");
 });
 document.addEventListener("visibilitychange", syncVisibility);
+reducedMotion.addEventListener("change", render);
 const expiryTimer = setInterval(checkExpiry, 30_000);
 const gesture = (event: PointerEvent) => {
   if ((event.target as Element).closest("[data-action=play],[data-track]"))
@@ -487,11 +523,33 @@ const gesture = (event: PointerEvent) => {
   if (player.isWanted && musicState !== "playing") void player.play();
 };
 document.addEventListener("pointerdown", gesture, { once: true });
+const progress = app.querySelector<HTMLInputElement>("#progress")!;
+const time = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+function updateProgress() {
+  progress.max = String(player.duration);
+  if (document.activeElement !== progress)
+    progress.value = String(player.currentTime);
+  app.querySelector("#music-time")!.textContent =
+    `${time(player.currentTime)} / ${time(player.duration)}`;
+}
+progress.addEventListener("input", () => {
+  player.seek(Number(progress.value));
+  updateProgress();
+});
+const progressTimer = setInterval(() => {
+  if (!document.hidden) updateProgress();
+}, 400);
 render();
 persist();
 syncVisibility();
+updateProgress();
+void player.play();
 if (import.meta.hot)
   import.meta.hot.dispose(() => {
+    actors?.destroy();
+    reducedMotion.removeEventListener("change", render);
+    clearInterval(progressTimer);
     player.destroy();
     clearInterval(expiryTimer);
     clearTimeout(toastTimer);

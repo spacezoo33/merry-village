@@ -12,6 +12,8 @@ export type Preferences = {
   village: VillageId;
   track: TrackId;
   snow: boolean;
+  motion: boolean;
+  lights: boolean;
   night: boolean;
   effect: NightId | null;
   volume: number;
@@ -21,6 +23,8 @@ export const defaults = (): Preferences => ({
   village: "cozy",
   track: "snow",
   snow: true,
+  motion: true,
+  lights: true,
   night: false,
   effect: null,
   volume: 0.35,
@@ -55,6 +59,8 @@ export function parsePreferences(raw: string | null): Preferences {
     if (VILLAGES.some((v) => v.id === p.village)) result.village = p.village;
     if (TRACKS.some((t) => t.id === p.track)) result.track = p.track;
     if (NIGHTS.some((n) => n.id === p.effect)) result.effect = p.effect;
+    if (typeof p.motion === "boolean") result.motion = p.motion;
+    if (typeof p.lights === "boolean") result.lights = p.lights;
     if (typeof p.snow === "boolean") result.snow = p.snow;
     if (typeof p.night === "boolean") result.night = p.night;
     if (typeof p.volume === "number" && Number.isFinite(p.volume))

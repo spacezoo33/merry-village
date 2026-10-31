@@ -13,7 +13,7 @@ import {
 } from "../src/state.ts";
 import { watchReward } from "../src/ad-session.ts";
 
-test("six complete layouts provide three free and three special villages, not six colour filters", () => {
+test("legacy layouts remain recoverable; catalog provides three free and three special villages with distinct carols", () => {
   assert.equal(VILLAGES.filter((v) => !v.premium).length, 3);
   assert.equal(VILLAGES.filter((v) => v.premium).length, 3);
   const layouts = VILLAGES.map((v) => villageObjects(v.id));

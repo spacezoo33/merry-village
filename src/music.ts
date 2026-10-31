@@ -1,19 +1,19 @@
 import { TRACKS, type TrackId } from "./catalog";
 export type MusicState = "playing" | "paused" | "blocked" | "unavailable";
-/** Five original scores, rendered as soft music-box partials; no remote audio. */
+/** In-house synthesis of documented public-domain carols. No downloaded recording. */
 export class MusicPlayer {
   private context: AudioContext | null = null;
   private gain: GainNode | null = null;
-  private timer: ReturnType<typeof setInterval> | null = null;
-  private voices = new Set<OscillatorNode>();
-  private cursor = 0;
-  private next = 0;
-  private track: TrackId;
+  private source: AudioBufferSourceNode | null = null;
+  private buffers = new Map<TrackId, AudioBuffer>();
+  private offset = 0;
+  private started = 0;
   private wanted = true;
   private hidden = false;
-  private volume: number;
   private generation = 0;
   state: MusicState = "paused";
+  private track: TrackId;
+  private volume: number;
   private changed: (state: MusicState) => void;
   constructor(
     track: TrackId,
@@ -24,155 +24,156 @@ export class MusicPlayer {
     this.volume = volume;
     this.changed = changed;
   }
-  private notify(state: MusicState): void {
-    this.state = state;
-    this.changed(state);
+  private notify(s: MusicState) {
+    this.state = s;
+    this.changed(s);
   }
-  private ensure(): boolean {
-    if (this.context) return true;
-    try {
-      this.context = new AudioContext();
-      this.gain = this.context.createGain();
-      this.gain.gain.value = this.volume;
-      const compressor = this.context.createDynamicsCompressor();
-      compressor.threshold.value = -18;
-      compressor.ratio.value = 4;
-      this.gain.connect(compressor);
-      compressor.connect(this.context.destination);
-      return true;
-    } catch {
-      this.notify("unavailable");
-      return false;
-    }
+  get duration() {
+    return (
+      (TRACKS.find((t) => t.id === this.track)!
+        .score.split(" ")
+        .reduce((a, n) => a + Number(n.split(":")[1]), 0) *
+        60) /
+      TRACKS.find((t) => t.id === this.track)!.bpm
+    );
   }
-  private voice(midi: number, at: number, beats: number, bass = false): void {
-    const ctx = this.context!;
-    const frequency = 440 * 2 ** ((midi - 69) / 12);
-    for (const [partial, level] of bass
-      ? [
-          [1, 0.07],
-          [2, 0.015],
-        ]
-      : [
-          [1, 0.2],
-          [2, 0.035],
-          [3, 0.012],
-        ]) {
-      const oscillator = ctx.createOscillator(),
-        envelope = ctx.createGain();
-      oscillator.type = "sine";
-      oscillator.frequency.value = frequency! * partial!;
-      envelope.gain.setValueAtTime(0, at);
-      envelope.gain.linearRampToValueAtTime(level!, at + 0.009);
-      envelope.gain.exponentialRampToValueAtTime(
-        0.0001,
-        at + Math.min(3, beats + 1.2),
-      );
-      oscillator.connect(envelope);
-      envelope.connect(this.gain!);
-      oscillator.start(at);
-      oscillator.stop(at + Math.min(3, beats + 1.2) + 0.04);
-      this.voices.add(oscillator);
-      oscillator.onended = () => {
-        this.voices.delete(oscillator);
-        oscillator.disconnect();
-        envelope.disconnect();
-      };
-    }
+  get currentTime() {
+    return (
+      (this.offset +
+        (this.source && this.context
+          ? this.context.currentTime - this.started
+          : 0)) %
+      this.duration
+    );
   }
-  private schedule(): void {
-    const ctx = this.context!;
-    if (ctx.state !== "running" || this.hidden || !this.wanted) return;
-    const score = TRACKS.find((t) => t.id === this.track)!;
-    const beat = 60 / score.bpm;
-    while (this.next < ctx.currentTime + 0.25) {
-      const note = score.notes[this.cursor]!;
-      const duration =
-        score.id === "waltz"
-          ? [1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1][this.cursor % 8]!
-          : this.cursor % 8 === 7
-            ? 2
-            : 1;
-      if (note) this.voice(note, this.next, duration * beat);
-      if (this.cursor % (score.id === "waltz" ? 4 : 8) === 0)
-        this.voice(score.root - 12, this.next, 3 * beat, true);
-      this.next += duration * beat;
-      this.cursor = (this.cursor + 1) % score.notes.length;
-    }
-  }
-  private clear(): void {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = null;
-    for (const voice of this.voices) {
-      try {
-        voice.stop();
-      } catch {
-        /* already ended */
+  private buffer(): AudioBuffer {
+    const cached = this.buffers.get(this.track);
+    if (cached) return cached;
+    const score = TRACKS.find((t) => t.id === this.track)!,
+      rate = 22050,
+      buffer = this.context!.createBuffer(
+        1,
+        Math.ceil(this.duration * rate),
+        rate,
+      ),
+      data = buffer.getChannelData(0);
+    let at = 0;
+    for (const token of score.score.split(" ")) {
+      const [midi, beats] = token.split(":").map(Number) as [number, number];
+      const duration = (beats * 60) / score.bpm;
+      if (midi) {
+        const hz = 440 * 2 ** ((midi - 69) / 12),
+          n = Math.min(
+            Math.floor((duration + 0.8) * rate),
+            data.length - Math.floor(at * rate),
+          );
+        for (let i = 0; i < n; i++) {
+          const t = i / rate,
+            env =
+              Math.min(1, t / 0.008) *
+              Math.exp(-t / Math.min(0.65, duration * 0.8));
+          data[Math.floor(at * rate) + i]! +=
+            (Math.sin(t * hz * Math.PI * 2) * 0.27 +
+              Math.sin(t * hz * 4 * Math.PI) * 0.045 +
+              Math.sin(t * hz * 6 * Math.PI) * 0.012) *
+            env;
+        }
       }
+      at += duration;
     }
-    this.voices.clear();
+    if (this.buffers.size >= 2)
+      this.buffers.delete(this.buffers.keys().next().value!);
+    this.buffers.set(this.track, buffer);
+    return buffer;
   }
-  async play(): Promise<void> {
+  async play() {
     this.wanted = true;
-    if (this.hidden || !this.ensure()) return;
+    if (this.hidden) return;
     const generation = ++this.generation;
     try {
-      // Some browsers leave resume pending until a gesture. Never claim playback then.
+      if (!this.context) {
+        this.context = new AudioContext();
+        this.gain = this.context.createGain();
+        this.gain.gain.value = this.volume;
+        this.gain.connect(this.context.destination);
+      }
       await Promise.race([
-        this.context!.resume(),
-        new Promise((resolve) => setTimeout(resolve, 300)),
+        this.context.resume(),
+        new Promise((r) => setTimeout(r, 350)),
       ]);
       if (generation !== this.generation || this.hidden || !this.wanted) return;
-      if (this.context!.state !== "running") {
+      if (this.context.state !== "running") {
         this.notify("blocked");
         return;
       }
-      if (!this.timer) {
-        this.next = this.context!.currentTime + 0.04;
-        this.schedule();
-        this.timer = setInterval(() => this.schedule(), 80);
+      if (!this.source) {
+        const source = this.context.createBufferSource();
+        source.buffer = this.buffer();
+        source.loop = true;
+        source.connect(this.gain!);
+        source.start(0, this.offset % this.duration);
+        this.source = source;
+        this.started = this.context.currentTime;
       }
       this.notify("playing");
     } catch {
-      if (generation === this.generation) this.notify("blocked");
+      this.notify(this.context ? "blocked" : "unavailable");
     }
   }
-  pause(): void {
+  private stop() {
+    this.offset = this.currentTime;
+    if (this.source) {
+      this.source.stop();
+      this.source.disconnect();
+      this.source = null;
+    }
+  }
+  pause() {
     this.wanted = false;
     this.generation++;
-    this.clear();
+    this.stop();
     void this.context?.suspend();
     this.notify("paused");
   }
-  toggle(): void {
+  toggle() {
     if (this.state === "playing") this.pause();
     else void this.play();
   }
-  select(track: TrackId): void {
+  select(track: TrackId) {
+    this.generation++;
+    this.stop();
     this.track = track;
-    this.cursor = 0;
-    this.clear();
+    this.offset = 0;
+    this.notify("paused");
   }
-  setVolume(volume: number): void {
-    this.volume = volume;
-    if (this.gain)
-      this.gain.gain.setTargetAtTime(volume, this.context!.currentTime, 0.03);
+  seek(seconds: number) {
+    const resume = this.wanted;
+    this.generation++;
+    this.stop();
+    this.offset = Math.max(0, Math.min(this.duration - 0.01, seconds));
+    if (resume) void this.play();
   }
-  setHidden(hidden: boolean): void {
+  setVolume(v: number) {
+    this.volume = v;
+    this.gain?.gain.setTargetAtTime(v, this.context!.currentTime, 0.03);
+  }
+  setHidden(hidden: boolean) {
+    if (this.hidden === hidden) return;
     this.hidden = hidden;
     if (hidden) {
       this.generation++;
-      this.clear();
+      this.stop();
       void this.context?.suspend();
       this.notify("paused");
     } else if (this.wanted) void this.play();
   }
-  get isWanted(): boolean {
+  get isWanted() {
     return this.wanted;
   }
-  destroy(): void {
+  destroy() {
     this.generation++;
-    this.clear();
+    this.stop();
+    this.buffers.clear();
     void this.context?.close();
   }
 }

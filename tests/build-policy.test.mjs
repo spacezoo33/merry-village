@@ -31,6 +31,11 @@ test("automatic workflow is web-only; release workflow has only a guarded manual
   );
   assert.match(web, /npm run build/);
   assert.match(web, /path: dist\//);
+  assert.doesNotMatch(
+    web,
+    /actions\/upload-artifact@|merry-village-web-|Upload web preview ZIP/,
+  );
+  assert.match(web, /actions\/upload-pages-artifact@/);
   const release = await readFile(
     new URL(".github/workflows/build-ait.yml", root),
     "utf8",

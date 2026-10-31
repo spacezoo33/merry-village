@@ -1,71 +1,56 @@
 export const LIGHT_PATTERNS = [
   {
     id: "all",
-    name: "전체 점멸",
-    description: "전구가 함께 천천히 숨 쉬듯 켜져요",
+    name: "전체 동시 점멸",
+    description: "1초마다 네 조명 그룹이 함께 켜지고 꺼져요",
   },
   {
     id: "alternate",
-    name: "교차 점멸",
-    description: "트리·건물·가로등 그룹이 번갈아 빛나요",
+    name: "좌우 순차 점멸",
+    description: "0.5초마다 화면 왼쪽에서 오른쪽으로 이동해요",
   },
   {
     id: "random",
-    name: "랜덤 점멸",
-    description: "각 전구가 서로 다른 리듬으로 반짝여요",
+    name: "불규칙 랜덤 점멸",
+    description: "0.5초마다 개별 조명이 불규칙하게 반짝여요",
   },
   {
     id: "gentle",
-    name: "은은한 반짝임",
-    description: "따뜻한 빛을 유지하며 잔잔하게 반짝여요",
+    name: "은은한 동시 밝기 변화",
+    description: "2.8초 주기로 모든 조명이 함께 밝아져요",
   },
 ] as const;
 export type LightPattern = (typeof LIGHT_PATTERNS)[number]["id"];
-/** Slow continuous functions: no hard transitions, randomness is deterministic/no flicker. */
+/** screenX is the current projected position, including the rotating tree's LEDs. */
 export function lightLevel(
   pattern: LightPattern,
   time: number,
   index: number,
   reduced = false,
-  group = index % 3,
-): number {
+  screenX = 0.5,
+) {
   if (reduced) return 0.78;
-  const smooth = (phase: number) => (1 + Math.sin(phase)) / 2;
-  const plateau = (phase: number) => {
-    const t = Math.max(0, Math.min(1, (Math.sin(phase) + 0.4) / 0.8));
-    return t * t * (3 - 2 * t);
-  };
-  if (pattern === "all") return plateau((time * Math.PI) / 3);
-  if (pattern === "alternate")
-    return plateau((time * Math.PI) / 3 + (group * Math.PI * 2) / 3);
-  if (pattern === "random")
-    return smooth(time * (0.85 + (index % 7) * 0.055) + index * 2.3999) ** 2.3;
-  return index % 3 === 0
-    ? 0.58 + 0.42 * smooth(time * 0.65 + index * 2.3999)
-    : 0.82;
+  const t = Math.max(0, time);
+  if (pattern === "all") return Math.floor(t) % 2 === 0 ? 1 : 0;
+  const slot = Math.floor(t / 0.5);
+  if (pattern === "alternate") {
+    const position = Math.min(
+      7,
+      Math.floor(Math.max(0, Math.min(1, screenX)) * 8),
+    );
+    return Math.abs(position - (slot % 8)) <= 1 ? 1 : 0;
+  }
+  if (pattern === "random") {
+    // One anchor in every eight emitters stays on; the rest get a fresh slot hash.
+    const hash = Math.sin((index + 1) * 127.1 + slot * 311.7) * 43758.5453;
+    return index % 8 === slot % 8 || hash - Math.floor(hash) > 0.38 ? 1 : 0;
+  }
+  return 0.28 + (0.72 * (1 - Math.cos((t * Math.PI * 2) / 2.8))) / 2;
 }
-
-export function nextLighting(state: {
-  lights: boolean;
-  lightPattern: LightPattern;
-}) {
-  if (!state.lights)
-    return { lights: true, lightPattern: "all" as LightPattern };
-  const index = LIGHT_PATTERNS.findIndex((p) => p.id === state.lightPattern);
-  return index === LIGHT_PATTERNS.length - 1
-    ? { lights: false, lightPattern: state.lightPattern }
-    : { lights: true, lightPattern: LIGHT_PATTERNS[index + 1]!.id };
+export function nextLighting(state: { lightPattern: LightPattern }) {
+  const i = LIGHT_PATTERNS.findIndex((p) => p.id === state.lightPattern);
+  return { lightPattern: LIGHT_PATTERNS[(i + 1) % LIGHT_PATTERNS.length]!.id };
 }
-export function lightLabel(state: {
-  lights: boolean;
-  lightPattern: LightPattern;
-}) {
-  return !state.lights
-    ? "조명 OFF"
-    : {
-        all: "전체 점멸",
-        alternate: "교차 점멸",
-        random: "랜덤 점멸",
-        gentle: "은은한 반짝임",
-      }[state.lightPattern];
+export function lightLabel(state: { lightPattern: LightPattern }) {
+  return LIGHT_PATTERNS.find((p) => p.id === state.lightPattern)!.name;
 }

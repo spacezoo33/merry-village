@@ -24,6 +24,7 @@ import { scene } from "./scene";
 import { icon, type Icon } from "./icons";
 import { MusicPlayer, type MusicState } from "./music";
 import {
+  subscribeSheetBack,
   adAvailability,
   earnPass,
   savePhoto,
@@ -49,6 +50,13 @@ let preview: {
 } | null = null;
 type Sheet = "villages" | "music" | "nights" | "photo" | "pass";
 let sheet: Sheet | null = null;
+let backGeneration = 0;
+let stopSheetBack = () => {};
+function releaseSheetBack() {
+  backGeneration++;
+  stopSheetBack();
+  stopSheetBack = () => {};
+}
 let availability: AdAvailability | null = null,
   availabilityPromise: Promise<void> | null = null;
 let rewardBusy = false,
@@ -195,6 +203,8 @@ function render(): void {
       actors = new Actors(
         app.querySelector<HTMLElement>("#scene-host .actor-stage")!,
         current.village,
+        (journey, x, visible) =>
+          trainSound.updatePosition(journey, x, visible, current.village),
       );
       app.querySelector("#graphics-status")!.textContent = "";
     } catch {
@@ -207,10 +217,8 @@ function render(): void {
   app.dataset.village = current.village;
   app.dataset.effect = current.effect ?? "none";
   app.classList.add("night");
-  app.classList.toggle("lights-off", !preferences.lights);
   actors?.update({
     motion: preferences.motion,
-    lights: preferences.lights,
     pattern: preferences.lightPattern,
     gold: current.effect === "wishes",
     hidden: document.hidden || rewardBusy,
@@ -223,7 +231,8 @@ function render(): void {
     ),
   );
   trainSound.setRunning(
-    preferences.motion &&
+    !!actors &&
+      preferences.motion &&
       !reducedMotion.matches &&
       !document.hidden &&
       !rewardBusy,
@@ -235,7 +244,10 @@ function render(): void {
       : "";
   for (const id of ["motion", "lights", "snow"] as const) {
     const button = app.querySelector<HTMLButtonElement>(`#${id}-toggle`)!;
-    button.setAttribute("aria-pressed", String(preferences[id]));
+    button.setAttribute(
+      "aria-pressed",
+      id === "lights" ? "true" : String(preferences[id]),
+    );
     app.querySelector(`#${id}-label`)!.textContent =
       id === "lights" ? "조명" : preferences[id] ? "ON" : "OFF";
     if (id === "lights") {
@@ -243,9 +255,7 @@ function render(): void {
     }
     if (id === "lights") {
       button.title = `${lightLabel(preferences)} · 눌러 다음 패턴`;
-      button.dataset.pattern = preferences.lights
-        ? preferences.lightPattern
-        : "off";
+      button.dataset.pattern = preferences.lightPattern;
     }
     if (id === "motion") button.disabled = !actors;
   }
@@ -259,6 +269,7 @@ function cleanPhoto(): void {
   photoUrl = "";
 }
 function closeSheet(): void {
+  releaseSheetBack();
   if (dialog.open) dialog.close();
   app.classList.remove("sheet-open");
 }
@@ -275,7 +286,16 @@ function openSheet(next: Sheet): void {
       String((b as HTMLElement).dataset.action === next),
     );
   app.classList.add("sheet-open");
-  if (!dialog.open) dialog.showModal();
+  if (!dialog.open) {
+    dialog.showModal();
+    const generation = ++backGeneration;
+    void subscribeSheetBack(() => {
+      if (!rewardBusy) closeSheet();
+    }).then((stop) => {
+      if (generation !== backGeneration || !dialog.open) stop();
+      else stopSheetBack = stop;
+    });
+  }
   if (photoLocked)
     app.querySelector("#sheet-feedback")!.textContent =
       "미리보기 사진 저장은 이용권이 필요해요. 기본 마을은 무료로 촬영할 수 있어요.";
@@ -372,7 +392,6 @@ async function takePhoto(): Promise<void> {
       current.night,
       preferences.snow,
       current.effect,
-      preferences.lights,
       captureActors?.snapshot() ?? null,
       preferences.lightPattern,
       actors?.lightingTime ?? 0,
@@ -437,11 +456,10 @@ function syncVisibility(): void {
     ),
   );
   trainSound.setRunning(
-    preferences.motion && !reducedMotion.matches && !hidden,
+    !!actors && preferences.motion && !reducedMotion.matches && !hidden,
   );
   actors?.update({
     motion: preferences.motion,
-    lights: preferences.lights,
     pattern: preferences.lightPattern,
     gold: display().effect === "wishes",
     hidden,
@@ -570,6 +588,7 @@ dialog.addEventListener("click", (event) => {
 });
 dialog.addEventListener("close", () => {
   if (dialog.open) return;
+  releaseSheetBack();
   app.classList.remove("sheet-open");
   if (sheet === "photo") cleanPhoto();
   sheet = null;
@@ -617,6 +636,7 @@ updateProgress();
 void player.play();
 if (import.meta.hot)
   import.meta.hot.dispose(() => {
+    releaseSheetBack();
     stopSnowMonitor();
     actors?.destroy();
     reducedMotion.removeEventListener("change", render);

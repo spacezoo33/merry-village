@@ -156,3 +156,35 @@ test("an ad that never loads times out without a reward", async () => {
     false,
   );
 });
+
+test("a conflicting failure or missing dismissal never grants a reward even after an earned callback", async () => {
+  for (const kind of ["failedToShow", "error", "timeout"]) {
+    const result = await watchReward(
+      {
+        load: (loaded) => {
+          loaded();
+          return () => {};
+        },
+        show: (event, error) => {
+          event("userEarnedReward");
+          if (kind === "error") error();
+          else if (kind === "failedToShow") event("failedToShow");
+          return () => {};
+        },
+      },
+      () => {},
+      5,
+    );
+    assert.equal(result, false, kind);
+  }
+});
+test("removed song IDs and old lighting OFF state migrate without restoring removed content", () => {
+  for (const track of ["lullaby", "letter"])
+    assert.equal(
+      parsePreferences(JSON.stringify({ track })).track,
+      "holy-night",
+    );
+  const state = parsePreferences('{"lights":false,"lightPattern":"gentle"}');
+  assert.equal(state.lights, undefined);
+  assert.equal(state.lightPattern, "gentle");
+});

@@ -4,16 +4,15 @@ import { nextLighting } from "../src/lighting.ts";
 import { SnowBudget, SNOW_COUNTS } from "../src/snow.ts";
 import { TRACKS } from "../src/catalog.ts";
 import { synthMusic } from "../src/music-synth.ts";
-test("lighting cycles all/alternate/random/gentle/off without losing the saved pattern", () => {
-  let p = { lights: true, lightPattern: "gentle" };
-  p = nextLighting(p);
-  assert.equal(p.lights, false);
-  const values = [];
+test("lighting has four modes, defaults gentle, and never cycles OFF", () => {
+  let state = { lightPattern: "gentle" };
+  const ids = [];
   for (let i = 0; i < 5; i++) {
-    p = nextLighting(p);
-    values.push(p.lights ? p.lightPattern : "off");
+    state = nextLighting(state);
+    ids.push(state.lightPattern);
+    assert.equal(state.lights, undefined);
   }
-  assert.deepEqual(values, ["all", "alternate", "random", "gentle", "off"]);
+  assert.deepEqual(ids, ["all", "alternate", "random", "gentle", "all"]);
 });
 test("74 larger snowflakes degrade after sustained frame pressure and recover without flapping", () => {
   assert.equal(
@@ -31,8 +30,8 @@ test("74 larger snowflakes degrade after sustained frame pressure and recover wi
   assert.equal(b.quality, "high");
 });
 test("all five independent carols produce finite non-silent music without an extra bell stem", () => {
-  assert.equal(TRACKS[3].name, "축하해요 크리스마스");
-  assert.equal(TRACKS[4].name, "거룩한 밤");
+  assert.equal(TRACKS[3].name, "거룩한 밤");
+  assert.equal(TRACKS[4].name, "오 베들레헴 작은 골");
   const fingerprints = new Set();
   for (const t of TRACKS) {
     assert.equal(t.available, true);
@@ -51,11 +50,14 @@ test("all five independent carols produce finite non-silent music without an ext
     fingerprints.add(t.score);
   }
   assert.equal(fingerprints.size, 5);
-  assert.deepEqual(TRACKS[3].notes.slice(0, 7), [62, 67, 67, 69, 67, 66, 64]);
-  assert.deepEqual(TRACKS[4].notes.slice(1, 6), [64, 64, 67, 67, 67]);
+  assert.deepEqual(TRACKS[3].notes.slice(1, 6), [64, 64, 67, 67, 67]);
+  assert.deepEqual(
+    TRACKS[4].notes.slice(0, 8),
+    [69, 69, 69, 68, 69, 72, 70, 62],
+  );
 });
 
-test("every village has measured windows, lamps and independent lighting groups", async () => {
+test("every village controls lamps/tunnels while windows have no modulation overlay", async () => {
   const { architecturalBulbs, decorBulbs } = await import(
     "../src/decor-lights.ts"
   );
@@ -64,17 +66,18 @@ test("every village has measured windows, lamps and independent lighting groups"
   for (const { id } of VILLAGES) {
     const bulbs = architecturalBulbs(id);
     assert.ok(bulbs.filter((b) => b.kind === "lamp").length >= 4);
-    assert.ok(bulbs.filter((b) => b.kind === "window").length >= 10);
+    assert.ok(!bulbs.some((b) => b.kind === "window"));
+    assert.equal(decorBulbs(id).filter((b) => b.kind === "tunnel").length, 2);
     for (const b of [...bulbs, ...decorBulbs(id)]) {
       assert.ok(b.x > 0 && b.x < 512 && b.y > 0 && b.y < 505);
       assert.equal(
         lightLevel("all", 2, 0, false, 0),
-        lightLevel("all", 2, 11, false, b.group),
+        lightLevel("all", 2, 11, false, b.x / 512),
       );
     }
   }
-  const levels = [0, 1, 2].map((group) =>
-    lightLevel("alternate", 1, 0, false, group),
+  const levels = [0, 0.5, 1].map((x) =>
+    lightLevel("alternate", 0, 0, false, x),
   );
   assert.ok(Math.max(...levels) - Math.min(...levels) > 0.8);
   const gentle = Array.from({ length: 60 }, (_, t) =>

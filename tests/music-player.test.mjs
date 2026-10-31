@@ -14,7 +14,13 @@ test("all tracks play with one source; pause, seek, loop and real end callbacks 
     () => ended++,
   );
   try {
-    for (const id of ["snow", "starlight", "waltz", "lullaby", "letter"]) {
+    for (const id of [
+      "snow",
+      "starlight",
+      "waltz",
+      "holy-night",
+      "bethlehem",
+    ]) {
       p.select(id);
       await p.play();
       assert.equal(p.state, "playing");
@@ -36,10 +42,11 @@ test("all tracks play with one source; pause, seek, loop and real end callbacks 
       final.onended();
       assert.equal(
         ended,
-        ["snow", "starlight", "waltz", "lullaby", "letter"].indexOf(id) + 1,
+        ["snow", "starlight", "waltz", "holy-night", "bethlehem"].indexOf(id) +
+          1,
       );
     }
-    p.select("lullaby");
+    p.select("holy-night");
     await p.play();
     p.setHidden(true);
     assert.equal(p.state, "paused");

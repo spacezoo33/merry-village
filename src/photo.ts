@@ -27,7 +27,6 @@ export async function captureVillage(
   _night: boolean,
   snow: boolean,
   effect: NightId | null,
-  lights: boolean,
   actors: HTMLCanvasElement | null,
   pattern: LightPattern = "gentle",
   lightingTime = 0,
@@ -88,16 +87,7 @@ export async function captureVillage(
   c.drawImage(atlas, sx, sy, sw, sh, 0, 180, 1200, 1200);
   drawSnow("mid");
   if (actors) c.drawImage(actors, 0, 180, 1200, 1200);
-  drawDecorLights(
-    c,
-    id,
-    pattern,
-    lightingTime,
-    lights,
-    effect === "wishes",
-    1200,
-    180,
-  );
+  drawDecorLights(c, id, pattern, lightingTime, effect === "wishes", 1200, 180);
   if (effect === "shooting") {
     for (let i = 0; i < 45; i++) {
       const x = (i * 197 + 30) % 1200,

@@ -36,23 +36,16 @@ jobs:
         run: npm ci
       - name: Check, test, build and verify web only
         run: npm run build
-      - name: Upload web preview ZIP
-        uses: actions/upload-artifact@v4
-        with:
-          name: merry-village-web-${{ github.run_number }}-${{ github.run_attempt }}-${{ github.sha }}
-          path: dist/
-          if-no-files-found: error
-          retention-days: 14
       - name: Prepare Pages artifact from the development branch
         if: github.ref == 'refs/heads/feat/elliptical-train-ride' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist/
-      - name: Write download instructions
+      - name: Write build summary
         run: |
           echo "### Merry Village web preview" >> "$GITHUB_STEP_SUMMARY"
           echo "Commit: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
-          echo "Download the web ZIP from this run's Artifacts section. No release package was generated." >> "$GITHUB_STEP_SUMMARY"
+          echo "Web-only validation completed. Pages uses its internal deployment artifact; no downloadable web ZIP was uploaded." >> "$GITHUB_STEP_SUMMARY"
 
   pages:
     needs: build

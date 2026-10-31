@@ -11,12 +11,12 @@ Christmas music box decorating app for Apps in Toss
 - 하단 4개 메뉴: **빌리지 / 음악 선택 / 특별한 밤 / 사진 촬영**. 기존 장식품별 선택은 제거했습니다.
 - 무료 3종: 포근한 크리스마스, 눈꽃 숲속 마을, 종소리 작은 성당.
 - 특별 3종: 산타의 선물 공방, 달빛 겨울 궁전, 진저브레드 마을. 이용권이 없으면 명시적인 미리보기를 제공합니다.
-- 고요한 밤·징글벨·기쁘다 구주 오셨네·축하해요 크리스마스·거룩한 밤의 자체 오르골 연주. 별도로 추가하던 작은 종소리는 제거했습니다. 재생·일시정지·진행·이전/다음·한 곡 반복·곡 끝 자동 다음 곡을 지원합니다. [음악 출처 및 확인 한계](docs/music-rights.md).
-- 오른쪽 동작/조명/눈 3개 버튼. 실제 3D 트리 37초 회전·연결 열차 18초 순환·주행음/경적. 빌리지별 철도 보정, 팝업 없는 조명 4패턴/OFF 순환과 기본 74개·성능 적응형 3단 눈 효과. 오로라/별빛/황금빛 밤 효과와 모션 감소 대응.
+- 고요한 밤·징글벨·기쁘다 구주 오셨네·거룩한 밤·오 베들레헴 작은 골의 자체 오르골 연주. 별도로 추가하던 작은 종소리는 제거했습니다. 재생·일시정지·진행·이전/다음·한 곡 반복·곡 끝 자동 다음 곡을 지원합니다. [음악 출처 및 확인 한계](docs/music-rights.md).
+- 오른쪽 동작/조명/눈 3개 버튼. 실제 3D 트리 37초 회전·연결 열차 18초 순환·주행음/경적. 빌리지별 철도 보정, 팝업·OFF 없는 조명 4모드 순환과 기본 74개·성능 적응형 3단 눈 효과. 오로라/별빛/황금빛 밤 효과와 모션 감소 대응.
 - 현재 마을의 1200×1560 PNG 사진 생성·웹 다운로드.
 - 실제 광고 보상 이벤트에만 연결한 7일 이용권과 만료 처리. **광고 ID가 없어 실광고/실기기 지급은 아직 미검증이며 웹에서는 지급하지 않습니다.**
 
-현재 안정화 내용과 브라우저 검증 절차는 [안정화 기록](docs/stabilization.md)에 있습니다. [이전 개선 기록](docs/final-polish.md)은 과거 이력입니다.
+현재 출시 전 점검과 검증 한계는 [출시 점검](docs/release-audit.md)에 있습니다. [이전 안정화 기록](docs/stabilization.md)은 과거 이력입니다. [이전 개선 기록](docs/final-polish.md)은 과거 이력입니다.
 
 에셋, 실제 구현, 광고/이용권 한계와 검증은 [2.0 구현 현황](docs/v2.md)을 확인하세요. 보상형 광고 ID는 `public/runtime-config.json`에 공개 설정으로 넣을 수 있습니다. 비밀키를 넣지 마세요.
 
@@ -37,29 +37,19 @@ npm run preview
 
 공식 SDK `@apps-in-toss/web-framework@3.9.0`, Vite, TypeScript와 기존 SDK 설정을 유지합니다. 개발 서버에서만 공식 devtools/mock이 활성화됩니다. 의존성은 모두 실제 참조가 있어 유지했습니다.
 
-## 웹 미리보기와 ZIP
+## GitHub Pages 개발 미리보기
 
-[Actions](https://github.com/spacezoo33/merry-village/actions)의 **Build web preview** 워크플로는 개발 브랜치/main push, PR 및 수동 실행에서 웹만 빌드합니다.
+[Actions](https://github.com/spacezoo33/merry-village/actions)의 **Build web preview**가 타입 검사·자동 테스트·웹 빌드·웹/라이선스 검증을 실행합니다.
+성공한 개발 브랜치 `feat/elliptical-train-ride`의 push/수동 실행만 Pages로 배포하며 PR 코드는 배포하지 않습니다.
+다운로드용 웹 ZIP 생성·업로드 단계는 없습니다. `actions/upload-pages-artifact`는 Pages 자체 배포에 필요한 내부 아티팩트이므로 유지합니다.
 
-1. 체크아웃 → Node 설정 → `npm ci`
-2. `npm run build` → 타입 검사, 웹/빌드 정책 테스트, 웹 빌드, 산출물 검증
-3. `merry-village-web-<실행번호>-<재실행번호>-<SHA>` Artifact 업로드 (14일 보관)
+고정 주소: **https://spacezoo33.github.io/merry-village/**
 
-실행 화면의 **Artifacts**에서 ZIP을 받습니다. ZIP 안에는 `index.html`, `assets/`, `build-info.json`이 들어 있습니다. 해제한 폴더를 정적 HTTP 서버로 실행하세요. 예: Python 3가 있다면 `python3 -m http.server 8080`. 휴대폰에서는 같은 네트워크의 PC 주소로 접속합니다. ES 모듈을 사용하므로 `file://` 실행은 지원하지 않습니다.
-
-검증기는 appName·실제 커밋·HTML/JS/CSS·CSS 이미지 참조를 검사하며, 외부/루트 절대 경로와 환경 파일·키 파일·AIT의 웹 번들 혼입을 거절합니다. `build-info.json`에는 커밋과 실행 식별자만 기록합니다. PR 빌드는 GitHub의 PR merge commit을 기록합니다.
-
-## 고정 주소: GitHub Pages (설정 후 사용)
-
-기본 예상 주소: **https://spacezoo33.github.io/merry-village/**
-
-현재 Pages 설정과 실제 배포 성공은 확인하지 못했습니다. 고정 주소가 이미 동작한다고 주장하지 않습니다. [환경 정리 및 Pages 설정 안내](docs/development.md#github-pages-켜기)의 클릭 순서대로 설정하면 개발 브랜치의 최신 성공 빌드가 이 주소에 배포되도록 구성했습니다. 기존 커스텀 도메인이 있다면 실제 주소는 Pages 화면을 기준으로 합니다.
-
-- 사용자가 요청한 개발 브랜치의 push/수동 실행에서 Pages 배포를 시도합니다. `ENABLE_PAGES` 변수는 필요하지 않습니다.
-- 개발 브랜치의 push/수동 실행만 배포하며 PR 코드는 배포하지 않습니다.
-- 웹 ZIP은 Pages 사용 여부와 관계없이 계속 업로드합니다.
-- Pages 배포 job에만 `pages: write`, `id-token: write` 권한을 줍니다. 웹 검사와 수동 AIT 작업은 `contents: read`만 사용합니다.
-- `vite.config.ts`의 상대 경로 `base: './'`를 유지해 Pages 하위 경로와 앱인토스 패키지를 함께 지원합니다.
+이전 커밋 6fc9c73의 Pages job 성공은 확인했습니다. 현재 변경의 배포 여부는 해당 커밋 Actions 결과로 확인합니다.
+환경의 Pages 도메인 차단 여부와 실제 배포 성공 여부는 별개입니다.
+`base: './'`, 기존 공식 SDK 설정과 개발 브랜치 전용 `pages: write`/`id-token: write` 권한을 유지합니다.
+웹 파일은 `dist/`뿐이며 `THIRD-PARTY-LICENSES.txt`에 실제 배포 의존성 고지를 포함합니다.
+자세한 준비 항목은 [출시 점검](docs/release-audit.md)을 확인하세요.
 
 ## 최종 완료 후에만: 수동 AIT 출시
 
@@ -84,6 +74,6 @@ npm run preview
 
 ## 보안과 검증 한계
 
-공개 Pages/ZIP에는 웹 번들만 올립니다. 비밀키를 `VITE_*`에 넣으면 브라우저 코드에 포함되므로 사용하지 마세요. 서버용 인증 정보는 GitHub Secrets/서버 설정에서만 다루고 웹 빌드로 전달하지 않습니다. 현재 웹 개발에는 Secrets가 필요하지 않습니다.
+공개 Pages에는 웹 번들만 올립니다. 비밀키를 `VITE_*`에 넣으면 브라우저 코드에 포함되므로 사용하지 마세요. 서버용 인증 정보는 GitHub Secrets/서버 설정에서만 다루고 웹 빌드로 전달하지 않습니다. 현재 웹 개발에는 Secrets가 필요하지 않습니다.
 
 실제 토스 기기 테스트, 콘솔 업로드, 최신 GitHub Actions 결과, Pages 배포는 별도 확인 사항입니다. [SDK 에셋 설명](src/assets/README.md)과 공식 문서 https://developers-apps-in-toss.toss.im/ 을 참고하세요.

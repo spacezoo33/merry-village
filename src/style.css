@@ -1317,9 +1317,6 @@ h1 span {
     box-shadow: 0 0 5px 2px #edb14c44;
   }
 }
-.lights-off .architectural-lights {
-  display: none;
-}
 #app[data-effect="wishes"] .architectural-lights i {
   width: 3px;
   height: 4px;
@@ -1810,9 +1807,6 @@ h1 span {
   box-shadow: 0 0 4px 1px var(--bulb-color);
   will-change: opacity;
 }
-.lights-off .architectural-lights {
-  display: block;
-}
 #app[data-effect="wishes"] .architectural-lights .decor-bulb {
   width: 0.5%;
   height: 0.5%;
@@ -1837,9 +1831,8 @@ h1 span {
   animation-play-state: paused;
 }
 
-/* Local emitter patches dim baked-in light only at measured lamp/window centres. */
-.architectural-lights .decor-bulb.window,
-.architectural-lights .decor-bulb.lamp {
+/* Only street lamps and tunnel lights are controlled. Building windows stay warm. */
+.architectural-lights .decor-bulb:is(.lamp, .tunnel) {
   width: var(--light-w);
   height: var(--light-h);
   margin: 0;
@@ -1847,12 +1840,10 @@ h1 span {
   border-radius: 35%;
   background: rgb(30 18 10 / calc(0.76 * (1 - var(--intensity, 1))));
 }
-.decor-bulb.window:before,
-.decor-bulb.lamp:before {
+.decor-bulb:is(.lamp, .tunnel):before {
   display: none;
 }
-.decor-bulb.window .bulb-emitter,
-.decor-bulb.lamp .bulb-emitter {
+.decor-bulb:is(.lamp, .tunnel) .bulb-emitter {
   inset: 0;
   border-radius: 35%;
   background: radial-gradient(ellipse, #fff1bcbb, #ffb44844 65%, transparent);
@@ -1860,9 +1851,12 @@ h1 span {
     0 0 8px 2px #ffc16499,
     0 4px 14px 5px #ffad3a33;
 }
+.decor-bulb.tunnel .bulb-emitter {
+  box-shadow: 0 0 6px 2px #ffc16488;
+}
 #app[data-effect="wishes"]
   .architectural-lights
-  .decor-bulb:is(.window, .lamp) {
+  .decor-bulb:is(.lamp, .tunnel) {
   width: var(--light-w);
   height: var(--light-h);
 }

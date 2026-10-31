@@ -44,12 +44,12 @@ test("connected carriages stay on one circular ground track and couplers attach 
 test("new controls default to on and safely migrate old saved preferences", () => {
   for (const p of [defaults(), parsePreferences('{"night":false}')]) {
     assert.equal(p.motion, true);
-    assert.equal(p.lights, true);
+    assert.equal(p.lights, undefined);
     assert.equal(p.snow, true);
   }
   const p = parsePreferences('{"motion":false,"lights":false}');
   assert.equal(p.motion, false);
-  assert.equal(p.lights, false);
+  assert.equal(p.lights, undefined);
 });
 test("checked historical scores have public-domain declarations, not licensed third-party recordings", async () => {
   for (const file of ["silent-night", "joy-to-world", "hark-herald"])
@@ -94,27 +94,37 @@ test("six calibrated railways meet their own atlas tunnel contact points and sta
   }
   assert.ok(RAIL_PROFILES.cozy.front[1] - RAIL_PROFILES.workshop.front[1] > 40);
 });
-test("four gentle lighting patterns are bounded, continuous, distinct and static under reduced motion", async () => {
+test("four lighting modes honor timing, actual screen position and reduced-motion safety", async () => {
   const { lightLevel, LIGHT_PATTERNS } = await import("../src/lighting.ts");
   assert.equal(LIGHT_PATTERNS.length, 4);
-  for (const { id } of LIGHT_PATTERNS) {
-    for (let i = 0; i < 9; i++)
-      for (let t = 0; t < 25; t += 0.1) {
-        const a = lightLevel(id, t, i),
-          b = lightLevel(id, t + 0.01, i);
-        assert.ok(a >= 0 && a <= 1);
-        assert.ok(Math.abs(a - b) < 0.025);
+  assert.equal(lightLevel("all", 0.99, 0), 1);
+  assert.equal(lightLevel("all", 1, 0), 0);
+  assert.equal(lightLevel("all", 2, 0), 1);
+  assert.equal(lightLevel("alternate", 0, 3, false, 0.03), 1);
+  assert.equal(lightLevel("alternate", 0, 0, false, 0.95), 0);
+  assert.equal(lightLevel("alternate", 3.5, 0, false, 0.95), 1);
+  assert.equal(lightLevel("alternate", 3.5, 3, false, 0.03), 0);
+  const before = Array.from({ length: 75 }, (_, i) =>
+    lightLevel("random", 0.49, i),
+  );
+  const after = Array.from({ length: 75 }, (_, i) =>
+    lightLevel("random", 0.5, i),
+  );
+  assert.notDeepEqual(before, after);
+  assert.ok(before.some(Boolean) && after.some(Boolean));
+  for (const { id } of LIGHT_PATTERNS)
+    for (let i = 0; i < 80; i++)
+      for (let t = 0; t < 5; t += 0.13) {
+        const v = lightLevel(id, t, i);
+        assert.ok(v >= 0 && v <= 1);
         assert.equal(lightLevel(id, t, i, true), 0.78);
       }
+  for (let t = 0; t < 3; t += 0.1) {
+    assert.equal(lightLevel("gentle", t, 0), lightLevel("gentle", t, 12));
+    assert.ok(
+      Math.abs(lightLevel("gentle", t, 0) - lightLevel("gentle", t + 2.8, 0)) <
+        1e-10,
+    );
   }
-  assert.equal(lightLevel("all", 2, 0), lightLevel("all", 2, 5));
-  assert.notEqual(lightLevel("alternate", 2, 0), lightLevel("alternate", 2, 1));
-  assert.notEqual(lightLevel("random", 2, 0), lightLevel("random", 2, 1));
-  assert.ok(lightLevel("gentle", 1, 8) >= 0.58);
-  const p = parsePreferences('{"lightPattern":"alternate"}');
-  assert.equal(p.lightPattern, "alternate");
-  assert.equal(
-    parsePreferences('{"lightPattern":"fake"}').lightPattern,
-    "gentle",
-  );
+  assert.equal(parsePreferences('{"lights":false}').lightPattern, "gentle");
 });

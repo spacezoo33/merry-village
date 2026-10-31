@@ -131,3 +131,19 @@ export async function savePhoto(
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
   return "download";
 }
+
+/** Verified against web-framework 3.9.0's GraniteEvent declaration.
+ * Subscribe only while a sheet is open; leave native root back/close behavior alone.
+ */
+export async function subscribeSheetBack(
+  onBack: () => void,
+): Promise<() => void> {
+  if (import.meta.env.DEV) return () => {};
+  try {
+    const sdk = await import("@apps-in-toss/web-framework");
+    if (sdk.Environment.environment !== "toss") return () => {};
+    return sdk.graniteEvent.addEventListener("backEvent", { onEvent: onBack });
+  } catch {
+    return () => {};
+  }
+}

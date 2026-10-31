@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-01 Asia/Seoul",
+  "source_base": "6fc9c736cd3a34fb9132e550b45268aa7086e423",
+  "tracks": [
+    {
+      "id": "snow",
+      "name": "고요한 밤",
+      "rms": 0.05267418281585319
+    },
+    {
+      "id": "starlight",
+      "name": "징글벨",
+      "rms": 0.04102552548775528
+    },
+    {
+      "id": "waltz",
+      "name": "기쁘다 구주 오셨네",
+      "rms": 0.03979345759693197
+    },
+    {
+      "id": "holy-night",
+      "name": "거룩한 밤",
+      "rms": 0.024945773637279768
+    },
+    {
+      "id": "bethlehem",
+      "name": "오 베들레헴 작은 골",
+      "rms": 0.043730675924723884
+    }
+  ],
+  "villages": [
+    {
+      "id": "cozy",
+      "angle": 1.6761,
+      "hornRms": 0.010082446521112086,
+      "trainRms": 0.015740386220859673
+    },
+    {
+      "id": "forest",
+      "angle": 1.75171,
+      "hornRms": 0.009871092284574773,
+      "trainRms": 0.0196957284276203
+    },
+    {
+      "id": "chapel",
+      "angle": 1.65861,
+      "hornRms": 0.009852483354540378,
+      "trainRms": 0.01822067872380804
+    },
+    {
+      "id": "workshop",
+      "angle": 1.64699,
+      "hornRms": 0.01008168761436127,
+      "trainRms": 0.01857073186567138
+    },
+    {
+      "id": "palace",
+      "angle": 1.65861,
+      "hornRms": 0.010086827489971263,
+      "trainRms": 0.015740386220859673
+    },
+    {
+      "id": "gingerbread",
+      "angle": 1.62953,
+      "hornRms": 0.009973747480567592,
+      "trainRms": 0.019351529429002375
+    }
+  ],
+  "mode_cycle": [
+    "all",
+    "alternate",
+    "random",
+    "gentle",
+    "all"
+  ],
+  "page_errors": [],
+  "lighting_fixtures_completed": true,
+  "execution_note": "Music/UI/train/photo passed in the full run. The fixture initially sampled a sweep outside the tree; its test sampling point was corrected and all six lighting/rotation/reduced-motion fixtures passed in a targeted rerun. No redundant full browser rerun.",
+  "limits": [
+    "Synthetic visibility events verify web handlers, not native Toss lifecycle",
+    "No real ad playback/reward or native photo save",
+    "No human speaker listening"
+  ]
+}

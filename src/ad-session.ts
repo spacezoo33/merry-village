@@ -41,17 +41,17 @@ export function watchReward(
           if (settled || loaded) return;
           loaded = true;
           clearTimeout(timer);
-          timer = setTimeout(() => finish(earned), timeout);
+          timer = setTimeout(() => finish(false), timeout);
           progress("광고 시청을 완료하면 이용권이 지급돼요");
           try {
             stopShow = port.show(
               (event) => {
                 if (settled) return;
                 if (event === "userEarnedReward") earned = true;
-                if (event === "dismissed" || event === "failedToShow")
-                  finish(earned);
+                if (event === "dismissed") finish(earned);
+                if (event === "failedToShow") finish(false);
               },
-              () => finish(earned),
+              () => finish(false),
             );
             if (settled) cleanup(stopShow);
           } catch {

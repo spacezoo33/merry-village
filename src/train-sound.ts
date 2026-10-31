@@ -1,8 +1,9 @@
-import { CHUFF_SECONDS, chuffOffset } from "./train-timing.ts";
+import {
+  CHUFF_SECONDS,
+  chuffOffset,
+  TRAIN_LAP_SECONDS,
+} from "./train-timing.ts";
 import { audioContext, audioStem } from "./audio-engine.ts";
-export function hornDelay(random = Math.random) {
-  return 20 + Math.max(0, Math.min(1, random())) * 30;
-}
 /** Seamless in-house loop + horns queued on the AUDIO clock, independent of rendering. */
 export class TrainSound {
   private context: AudioContext | null = null;
@@ -14,18 +15,15 @@ export class TrainSound {
   private active = 0;
   private journey = 0;
   private voices = new Set<AudioScheduledSourceNode>();
-  private timer: ReturnType<typeof setInterval> | null = null;
   private wanted = false;
   private generation = 0;
-  private plan: number[] = [];
-  private scheduled = new Set<number>();
-  private observed = new Set<number>();
+  private previousPosition: { journey: number; x: number } | null = null;
+  private lastPass = -1;
+  private village = "";
   private history: number[] = [];
-  private random: () => number;
   private update: (status: string) => void;
-  constructor(update: (status: string) => void, random = Math.random) {
+  constructor(update: (status: string) => void) {
     this.update = update;
-    this.random = random;
   }
   setRunning(running: boolean) {
     if (running === this.wanted) return;
@@ -95,56 +93,43 @@ export class TrainSound {
         source.start(startAt, this.offset);
         this.loop = source;
         this.loopStart = startAt;
-        if (!this.plan.length)
-          this.plan.push(this.active + hornDelay(this.random));
-        this.schedule();
-        this.timer = setInterval(() => this.schedule(), 1000);
       }
       this.update("기차 소리 재생 중");
     } catch {
       this.update("기차 소리를 재생할 수 없어요");
     }
   }
-  private get activeTime() {
-    return (
-      this.active +
-      (this.loop ? Math.max(0, this.context!.currentTime - this.loopStart) : 0)
-    );
-  }
-  private observe() {
-    if (!this.loop) return;
-    const now = this.activeTime;
-    for (const at of this.plan)
-      if (at <= now && !this.observed.has(at)) {
-        this.observed.add(at);
-        this.history.push(at);
-        if (this.history.length > 100) this.history.shift();
-      }
-  }
-  private schedule() {
-    if (!this.context || !this.wanted) return;
-    const now = this.activeTime;
-    this.observe();
-    this.plan = this.plan.filter((t) => {
-      if (t <= now) {
-        this.scheduled.delete(t);
-        this.observed.delete(t);
-        return false;
-      }
-      return true;
-    });
-    if (!this.plan.length) this.plan.push(now + hornDelay(this.random));
-    while (this.plan.at(-1)! < now + 70) {
-      const next = this.plan.at(-1)! + hornDelay(this.random);
-      this.plan.push(next);
+  /** Called from the actual rendered engine pose. No horn timer or random schedule. */
+  updatePosition(
+    journey: number,
+    x: number,
+    visible: boolean,
+    village: string,
+  ) {
+    if (village !== this.village) {
+      this.village = village;
+      this.previousPosition = null;
+      this.lastPass = -1;
     }
-    for (const at of this.plan)
-      if (at > now && !this.scheduled.has(at)) {
-        this.horn(
-          Math.max(this.context.currentTime, this.loopStart) + at - now,
-        );
-        this.scheduled.add(at);
-      }
+    if (!this.wanted || !this.loop || this.context?.state !== "running") {
+      this.previousPosition = null;
+      return;
+    }
+    const previous = this.previousPosition;
+    this.previousPosition = { journey, x };
+    if (
+      !previous ||
+      journey <= previous.journey ||
+      journey - previous.journey > TRAIN_LAP_SECONDS / 2
+    )
+      return;
+    const pass = Math.floor(Math.max(0, journey - 0.65) / TRAIN_LAP_SECONDS);
+    if (visible && previous.x > 0.5 && x <= 0.5 && pass !== this.lastPass) {
+      this.lastPass = pass;
+      this.horn(this.context.currentTime);
+      this.history.push(this.context.currentTime);
+      if (this.history.length > 100) this.history.shift();
+    }
   }
   private horn(at: number) {
     const c = this.context!;
@@ -176,11 +161,9 @@ export class TrainSound {
   }
   private stop() {
     this.generation++;
-    if (this.timer) clearInterval(this.timer);
-    this.timer = null;
+    this.previousPosition = null;
     const c = this.context;
     if (c) {
-      this.observe();
       if (this.loop) {
         const dt = Math.max(0, c.currentTime - this.loopStart);
         this.active += dt;
@@ -196,15 +179,11 @@ export class TrainSound {
           /* ended */
         }
       }
-      this.scheduled.clear();
-      this.plan = [];
-      this.observed.clear();
       this.voices.clear();
     }
     this.update("기차 소리 정지");
   }
   get diagnostics() {
-    this.observe();
     const now = this.context?.currentTime ?? 0;
     return {
       running: !!this.loop && this.context?.state === "running",
@@ -215,12 +194,6 @@ export class TrainSound {
       ),
       horns: this.history.length,
       hornTimes: this.history.slice(-12),
-      untilHorn: Number(
-        (
-          (this.plan.find((t) => t > this.activeTime) ?? this.activeTime) -
-          this.activeTime
-        ).toFixed(2),
-      ),
     };
   }
   destroy() {

@@ -5,10 +5,9 @@ export type DecorBulb = {
   x: number;
   y: number;
   color: string;
-  kind?: "window" | "lamp";
+  kind?: "lamp" | "tunnel";
   w?: number;
   h?: number;
-  group?: number;
 };
 // Coordinates measured in each source atlas cell (bottom cells start at y=519).
 export const ARCHITECTURE: Record<
@@ -167,104 +166,18 @@ export const ARCHITECTURE: Record<
 };
 export function architecturalBulbs(id: VillageId): DecorBulb[] {
   return [
-    ...ARCHITECTURE[id].windows.map(([x, y, w, h]) => ({
-      x: x!,
-      y: y!,
-      w: w!,
-      h: h!,
-      kind: "window" as const,
-      group: 1,
-      color: "#ffbc59",
-    })),
     ...ARCHITECTURE[id].lamps.map(([x, y]) => ({
       x: x!,
       y: y!,
       w: 5,
       h: 7,
       kind: "lamp" as const,
-      group: 2,
       color: "#ffe2a1",
     })),
   ];
 }
 
-/** Source-cell coordinates along eaves, the front garland and both masonry arches.
- * Principal windows and lamp emitters are independent, measured overlays.
- */
-const EAVES: Record<VillageId, number[][][]> = {
-  cozy: [
-    [
-      [92, 215],
-      [124, 219],
-      [160, 215],
-    ],
-    [
-      [337, 214],
-      [371, 219],
-      [416, 211],
-    ],
-  ],
-  forest: [
-    [
-      [96, 228],
-      [130, 233],
-      [167, 226],
-    ],
-    [
-      [208, 190],
-      [259, 196],
-      [312, 190],
-    ],
-  ],
-  chapel: [
-    [
-      [96, 224],
-      [128, 227],
-      [165, 221],
-    ],
-    [
-      [348, 223],
-      [382, 228],
-      [417, 222],
-    ],
-  ],
-  workshop: [
-    [
-      [98, 173],
-      [134, 181],
-      [171, 173],
-    ],
-    [
-      [344, 175],
-      [377, 184],
-      [415, 176],
-    ],
-  ],
-  palace: [
-    [
-      [199, 178],
-      [252, 187],
-      [305, 178],
-    ],
-    [
-      [341, 185],
-      [374, 190],
-      [407, 184],
-    ],
-  ],
-  gingerbread: [
-    [
-      [92, 181],
-      [132, 188],
-      [169, 181],
-    ],
-    [
-      [343, 182],
-      [379, 187],
-      [417, 179],
-    ],
-  ],
-};
+/** Measured source-cell paths for the two tunnel mouths only. */
 function curve(a: number[], control: number[], b: number[], count: number) {
   return Array.from({ length: count }, (_, i) => {
     const t = i / (count - 1),
@@ -276,36 +189,28 @@ function curve(a: number[], control: number[], b: number[], count: number) {
   });
 }
 export function decorBulbs(id: VillageId): DecorBulb[] {
-  const p = RAIL_PROFILES[id],
-    y = p.front[1],
-    cx = p.front[0];
-  const front = curve(
-    [p.left[0] + 34, y - 61],
-    [cx, y - 32],
-    [p.right[0] - 36, y - 61],
-    32,
+  const p = RAIL_PROFILES[id];
+  const arches = [p.left, p.right].flatMap(([x, y]) =>
+    curve([x - 24, y - 24], [x, y - 71], [x + 24, y - 24], 14),
   );
-  const arches = [p.left, p.right].flatMap(([x, contact]) =>
-    curve(
-      [x - 24, contact - 24],
-      [x, contact - 71],
-      [x + 24, contact - 24],
-      14,
-    ),
-  );
-  const roofs = EAVES[id].flatMap(([a, c, b]) => curve(a!, c!, b!, 14));
-  return [...front, ...arches, ...roofs].map((p, i) => ({
-    ...p,
-    color: ["#ffd48c", "#ff5136", "#8ad972"][i % 3]!,
-    group: 1,
-  }));
+  return [
+    ...arches.map((v) => ({ ...v, color: "#ffd48c" })),
+    ...[p.left, p.right].map(([x, y]) => ({
+      x,
+      y: y - 18,
+      color: "#ffc97d",
+      kind: "tunnel" as const,
+      w: 5,
+      h: 4,
+    })),
+  ];
 }
 export function decorMarkup(id: VillageId) {
   const height = RAIL_PROFILES[id].height;
   return [...decorBulbs(id), ...architecturalBulbs(id)]
     .map(
       (p) =>
-        `<i class="decor-bulb ${p.kind ?? "garland"}" data-light-group="${p.group ?? 1}" style="--light-w:${((p.w ?? 2.56) / 512) * 100}%;--light-h:${((p.h ?? 2.56) / height) * 100}%;left:${(p.x / 512) * 100}%;top:${(p.y / height) * 100}%;--bulb-color:${p.color}"><span class="bulb-emitter"></span></i>`,
+        `<i class="decor-bulb ${p.kind ?? "garland"}" style="--light-w:${((p.w ?? 2.56) / 512) * 100}%;--light-h:${((p.h ?? 2.56) / height) * 100}%;left:${(p.x / 512) * 100}%;top:${(p.y / height) * 100}%;--bulb-color:${p.color}"><span class="bulb-emitter"></span></i>`,
     )
     .join("");
 }
@@ -314,7 +219,6 @@ export function drawDecorLights(
   id: VillageId,
   pattern: LightPattern,
   time: number,
-  on: boolean,
   gold: boolean,
   width: number,
   top: number,
@@ -324,15 +228,13 @@ export function drawDecorLights(
   [...decorBulbs(id), ...architecturalBulbs(id)].forEach((p, i) => {
     const x = p.x * scale,
       y = top + (p.y / height) * width,
-      level = on
-        ? lightLevel(
-            pattern,
-            time,
-            i,
-            matchMedia("(prefers-reduced-motion: reduce)").matches,
-            p.group ?? 1,
-          )
-        : 0;
+      level = lightLevel(
+        pattern,
+        time,
+        i + 100,
+        matchMedia("(prefers-reduced-motion: reduce)").matches,
+        p.x / 512,
+      );
     c.fillStyle = "#27351e";
     c.beginPath();
     c.arc(x, y, scale * 0.8, 0, Math.PI * 2);

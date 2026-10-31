@@ -1,42 +1,43 @@
-# 음악 및 기차 소리의 출처
+# 최종 음악 출처와 권리 점검
 
-외부 MP3·상업 녹음물·현대 합창/피아노 편곡·가사·번역 가사는 사용하지 않는다.
-앱은 원선율의 단선율 음높이/박자를 `src/catalog.ts`에 기록하고,
-`src/music-synth.ts`의 자체 오르골 악기와 독자적인 저음 반주로 연주한다.
-음악 밖에 별도로 얹던 작은 종 신호·버퍼·소스·버스는 제거했다.
-오르골 악기의 배음은 음악 자체의 음색으로 유지한다.
+이번 목록: 고요한 밤 / 징글벨 / 기쁘다 구주 오셨네 / 거룩한 밤 / 오 베들레헴 작은 골.
+「축하해요 크리스마스」의 런타임 데이터와 별도 출처 파일은 제거했다. 이전 기록은 Git 이력에만 남는다.
+외부 MP3, 녹음, 현대 피아노/합창 반주, 번역 가사를 가져오지 않는다. 단선율을 `catalog.ts`에 기록하고,
+기존 `music-synth.ts`의 독립 오르골 음색과 자체 반주로 Web Audio PCM을 만든다. 별도 장식 종소리는 없다.
 
-| 앱 제목 | 사용하는 원선율 | 앱 연주 |
+## 새 5번: ST. LOUIS
+
+- 작곡가: Lewis Henry Redner (1830–1908). 작곡: 1868년.
+- 실제 열람한 악보: MutopiaProject 커밋 `2144afd6f52d56c5b6995b8b589ef1268b3139f0`의
+  [RednerLH/st_louis/st_louis.ly](https://github.com/MutopiaProject/MutopiaProject/blob/2144afd6f52d56c5b6995b8b589ef1268b3139f0/ftp/RednerLH/st_louis/st_louis.ly).
+- 원문 보존: [st-louis.ly](music-sources/st-louis.ly), 내용은 유지하고 행 끝 공백만 정리했다.
+- 제목 St. Louis, 작곡가/생몰년, 1868년 및 출처 `www.cyberhymnal.org`를 실제 원문에서 확인했다.
+  파일에는 ABC 원본, 소프라노/알토/테너/베이스, 편집자 Steve Dunlop와 재사용 허용/퍼블릭 도메인 설명이 함께 있다.
+- 실제 사용: **소프라노 단선율만** 음높이와 박자로 직접 옮겼다. F장조, 첫 8음 A4/A4/A4/G#4/A4/C5/Bb4/D4,
+  4/4박자, 자체 연주 84 BPM. 원문의 알토·테너·베이스를 편곡으로 가져오지 않는다.
+- 1868년 원선율 및 1908년 사망 작곡가라는 역사 정보와 공개 악보의 재사용 조건을 함께 대조했다.
+  단순히 앱 주석의 Public Domain 문구만 보고 통과시킨 것이 아니다.
+- 이 파일은 2008년 공개 전산 악보이며 **1868년 초판 스캔을 직접 열람한 것은 아니다**.
+  원선율의 공개 전산 악보 대조는 완료했고, 초판 판면의 독립 대조는 확인 필요로 남긴다.
+  현대 녹음·현대 편곡을 사용할 수 있다는 판단으로 확대하지 않는다.
+
+## 전체 목록
+
+| 곡 | 원선율·근거 | 실제 사용·판정 |
 |---|---|---|
-| 고요한 밤 | Franz Xaver Gruber, 1818; 작곡가 1863 사망. 보존한 Mutopia 원문 Public Domain 표기 | 자체 합성, 76 BPM |
-| 징글벨 | James Lord Pierpont, 1857; 작곡가 1893 사망. 기존 자체 원선율 채보 | 자체 합성, 116 BPM |
-| 기쁘다 구주 오셨네 | ANTIOCH, Lowell Mason, 1836; 작곡가 1872 사망. 보존한 Mutopia 원문 Public Domain 표기 | 자체 합성, 104 BPM |
-| 축하해요 크리스마스 | We Wish You a Merry Christmas의 전통 West Country 단선율. Warrell의 1935 합창 편곡과 구분 | 독립 채보·자체 반주·합성, 112 BPM |
-| 거룩한 밤 | Adolphe Adam, 1847; 작곡가 1856 사망. Mutopia의 Minuit Chrétiens 원문 Public Domain 표기 실제 확인 | 원선율의 장식음을 간소화한 자체 오르골 연주, 78 BPM |
+| 고요한 밤 | Gruber (1863 사망), 1818 초연. 보존한 `silent-night.ly`의 작곡가·초연일·역사 악보 이미지 출처·재사용 조건 확인 | 기존 자체 채보/합성 유지. **안전(원선율/녹음 방식)**. 역사적 이미지 자체의 직접 대조는 확인 필요 |
+| 징글벨 | Pierpont (1893 사망), 1857 The One Horse Open Sleigh. [LOC 역사 악보](https://www.loc.gov/item/sm1857.451080/)가 기존 근거 | 기존 독립 채보/합성 유지. **확인 필요**: 이번 환경에서 LOC 원문 접근 불가, 원곡 대비 전체 채보 대조 미검증 |
+| 기쁘다 구주 오셨네 | ANTIOCH / Mason (1872 사망), 1836. `joy-to-world.ly`의 실제 소프라노(D장조)와 작곡가·공개 재사용 조건 확인 | 기존 단선율 및 자체 반주 유지. **안전(원선율/자체 연주)**. 현대 합창 녹음 사용 없음 |
+| 거룩한 밤 | Adam (1856 사망), 1847. [Mutopia Minuit Chrétiens](https://github.com/MutopiaProject/MutopiaProject/blob/2144afd6f52d56c5b6995b8b589ef1268b3139f0/ftp/AdamA/minuit_chretiens/minuit_chretiens.ly), 보존 원문의 Ed. Léon Grus 출처와 melodie 파트 확인 | 기존 선율·자체 연주를 4번으로 이동. **안전(확인한 공개 악보 범위)** |
+| 오 베들레헴 작은 골 | Redner, 1868 ST. LOUIS, 위 실제 악보 | 새 단선율 채보와 자체 반주. **안전(확인한 공개 전산 악보 범위)**, 1868 초판 스캔 추가 대조는 확인 필요 |
 
-5번은 보존한 [o-holy-night.ly](music-sources/o-holy-night.ly)의 `melodie` 파트에 근거한다.
-출처는 MutopiaProject 커밋 `2144afd6f52d56c5b6995b8b589ef1268b3139f0`의
-[AdamA/minuit_chretiens/minuit_chretiens.ly](https://github.com/MutopiaProject/MutopiaProject/blob/2144afd6f52d56c5b6995b8b589ef1268b3139f0/ftp/AdamA/minuit_chretiens/minuit_chretiens.ly)이며,
-`source = "Ed. Léon Grus"`, `copyright = "Domaine public - Public Domain"`,
-`license = "Public Domain"`가 명시되어 있다. 현대 영어 가사·번역 가사 및 외부 반주/녹음은 쓰지 않는다.
+Mutopia 원본들은 위 고정 커밋에서 확인했다. 고요한 밤은 `ftp/GruberFX/stille-orig/stille-orig.ly`,
+ANTIOCH는 `ftp/HandelGF/antioch/antioch.ly`이다. 현대 가사/번역을 앱에 포함하지 않는다.
+이 기록은 모든 국가의 법률 검토나 저작권 보증을 뜻하지 않는다. 열람하지 못한 원문은 열람했다고 표시하지 않는다.
 
-4번의 전통 선율 교차 확인 자료와 접근 한계는
-[we-wish-you-a-merry-christmas.txt](music-sources/we-wish-you-a-merry-christmas.txt)에 기록했다.
-참조 저장소의 프로그램은 이용 허락을 확인할 수 없어 복사하지 않았다.
-알려진 전통 단선율만 독립적으로 기록했고, 보호될 수 있는 1935년 합창 편곡은 사용하지 않는다.
-Hymnary 원문과 역사적 인쇄 악보의 추가 대조는 현재 네트워크 제한으로 미검증이다.
-이 기록은 모든 국가에서의 법률 검토나 현대 편곡·녹음물의 이용 허락을 뜻하지 않는다.
+## 효과음
 
-기존 공개 악보 보존 기록도 삭제하지 않는다. 고요한 밤과 ANTIOCH의 원문은 같은 Mutopia 커밋의
-`ftp/GruberFX/stille-orig/stille-orig.ly`, `ftp/HandelGF/antioch/antioch.ly`이다.
-징글벨의 역사적 발행 자료 참고: <https://www.loc.gov/item/sm1857.451080/>.
-이 링크의 스캔을 이번 세션에서 열람했다고 주장하지 않는다.
-
-음악은 22.05kHz 모노 Float32 PCM으로 새로 합성하고 최대 진폭 .36으로 정규화한다.
-2개 곡까지 캐시하고 재생·일시정지·이전/다음·한 곡 반복·곡 끝 자동 다음 곡을 지원한다.
-별도 종소리 stem이나 종소리 예약 타이머는 없다.
-
-`audio-engine.ts`의 음악/기차/기적 독립 버스와 최종 헤드룸 리미터를 사용한다.
-기차 칙칙 소리는 자체 노이즈·필터·엔벌로프, 기적은 자체 사인파 3음 합성이다.
-기차 주행음 볼륨과 18초당 64펄스는 유지한다. 기적은 매번 20~50초의 새로운 난수를 뽑으며,
-정지·백그라운드 진입 시 예약 음원과 스케줄을 취소하고, 운행 재개 시 새 간격으로 시작한다.
+칙칙폭폭은 직접 생성하는 노이즈·필터·엔벌로프, 기적은 자체 사인파 3음 합성이다.
+외부 샘플·녹음·음악 파일은 없다. **안전(파일/합성 방식 확인)**.
+기적은 실제 기관차가 보이는 앞쪽 화면 중앙을 통과할 때만 발생하며 타이머나 난수로 발생시키지 않는다.
+기차를 멈추거나 앱이 숨겨지거나 광고를 준비하면 음원을 정지한다. 오르골 악기 자체의 배음만 유지한다.

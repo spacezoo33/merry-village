@@ -12,7 +12,6 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { consist, TREE_SECONDS, RADIUS } from "./kinematics";
 export type ActorSettings = {
   motion: boolean;
-  lights: boolean;
   gold: boolean;
   hidden: boolean;
   pattern: LightPattern;
@@ -80,6 +79,13 @@ export class Actors {
   private glowMaterial: T.ShaderMaterial | null = null;
   private diodeBodies: T.InstancedMesh | null = null;
   private diodeColors: T.Color[] = [];
+  private ledPositions = new Float32Array(225);
+  private projectedLight = new T.Vector3();
+  private onTrainPosition: (
+    journey: number,
+    x: number,
+    visible: boolean,
+  ) => void;
   private ledWeights = new Float32Array(75);
   private ledAttribute = new T.BufferAttribute(this.ledWeights, 1);
   private bulbs: { material: T.MeshStandardMaterial; phase: number }[] = [];
@@ -90,7 +96,6 @@ export class Actors {
   private lastDraw = 0;
   private settings: ActorSettings = {
     motion: true,
-    lights: true,
     gold: false,
     hidden: false,
     pattern: "gentle",
@@ -101,7 +106,16 @@ export class Actors {
   private lost = false;
   private textures: T.Texture[] = [];
   private host: HTMLElement;
-  constructor(host: HTMLElement, village: VillageId) {
+  constructor(
+    host: HTMLElement,
+    village: VillageId,
+    onTrainPosition: (
+      journey: number,
+      x: number,
+      visible: boolean,
+    ) => void = () => {},
+  ) {
+    this.onTrainPosition = onTrainPosition;
     this.village = village;
     this.calibration = railCalibration(village);
     this.host = host;
@@ -272,7 +286,7 @@ export class Actors {
       new T.MeshStandardMaterial({ roughness: 0.5 }),
       75,
     );
-    const ledPositions = new Float32Array(225),
+    const ledPositions = this.ledPositions,
       ledColors = new Float32Array(225),
       dummy = new T.Object3D();
     for (let i = 0; i < 75; i++) {
@@ -294,6 +308,13 @@ export class Actors {
     geometry.setAttribute("position", new T.BufferAttribute(ledPositions, 3));
     geometry.setAttribute("tint", new T.BufferAttribute(ledColors, 3));
     geometry.setAttribute("level", this.ledAttribute);
+    geometry.setAttribute(
+      "sparkle",
+      new T.BufferAttribute(
+        Float32Array.from({ length: 75 }, (_, i) => (i % 9 === 0 ? 1 : 0)),
+        1,
+      ),
+    );
     const points = new T.Points(
       geometry,
       new T.ShaderMaterial({
@@ -302,9 +323,9 @@ export class Actors {
         blending: T.AdditiveBlending,
         uniforms: { size: { value: 9 * Math.min(devicePixelRatio, 1.75) } },
         vertexShader:
-          "attribute vec3 tint; attribute float level; varying vec3 vTint; varying float vLevel; uniform float size; void main(){ vTint=tint;vLevel=level;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);gl_PointSize=size; }",
+          "attribute vec3 tint; attribute float level; attribute float sparkle; varying float vSparkle; varying vec3 vTint; varying float vLevel; uniform float size; void main(){ vTint=tint;vLevel=level;vSparkle=sparkle;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);gl_PointSize=size; }",
         fragmentShader:
-          "varying vec3 vTint;varying float vLevel;void main(){float r=length(gl_PointCoord-vec2(.5))*2.;float a=pow(max(0.,1.-r),2.);gl_FragColor=vec4(vTint*vLevel,a*min(1.,vLevel));}",
+          "varying vec3 vTint;varying float vLevel;varying float vSparkle;void main(){float r=length(gl_PointCoord-vec2(.5))*2.;vec2 p=abs(gl_PointCoord-vec2(.5)); float a=pow(max(0.,1.-r),2.); a+=.12*vSparkle*pow(max(0.,1.-min(p.x,p.y)*40.),3.)*max(0.,1.-r);gl_FragColor=vec4(vTint*vLevel,a*min(1.,vLevel));}",
       }),
     );
     this.glowMaterial = points.material;
@@ -353,6 +374,25 @@ export class Actors {
     halo.addColorStop(1, "#ffb53c00");
     c.fillStyle = halo;
     c.fillRect(0, 0, 64, 64);
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4,
+        radius = i % 2 ? 17 : 24;
+      const ray = c.createLinearGradient(
+        32,
+        32,
+        32 + Math.cos(a) * radius,
+        32 + Math.sin(a) * radius,
+      );
+      ray.addColorStop(0, "#fff4d2bb");
+      ray.addColorStop(0.4, "#ffd16b88");
+      ray.addColorStop(1, "#ffd16b00");
+      c.strokeStyle = ray;
+      c.lineWidth = i % 2 ? 1 : 1.5;
+      c.beginPath();
+      c.moveTo(32, 32);
+      c.lineTo(32 + Math.cos(a) * radius, 32 + Math.sin(a) * radius);
+      c.stroke();
+    }
     const map = new T.CanvasTexture(glowCanvas);
     this.textures.push(map);
     this.starGlow = new T.Sprite(
@@ -500,12 +540,7 @@ export class Actors {
   private schedule() {
     cancelAnimationFrame(this.raf);
     this.previous = 0;
-    if (
-      !this.settings.hidden &&
-      !this.lost &&
-      (this.settings.motion || this.settings.lights) &&
-      !this.reduced.matches
-    )
+    if (!this.settings.hidden && !this.lost && !this.reduced.matches)
       this.raf = requestAnimationFrame(this.frame);
   }
   private frame = (now: number) => {
@@ -513,7 +548,7 @@ export class Actors {
     const dt = Math.max(0, (now - this.previous) / 1000);
     this.previous = now;
     if (this.settings.motion) this.elapsed += dt;
-    if (this.settings.lights) this.lightTime += dt;
+    this.lightTime += dt;
     if (now - this.lastDraw > 32) {
       this.draw();
       this.lastDraw = now;
@@ -553,16 +588,21 @@ export class Actors {
           (RADIUS - w.position.z * this.calibration.scale)) /
         (this.calibration.lap * 0.035 * this.calibration.scale);
     });
-    for (let i = 0; i < 75; i++)
-      this.ledWeights[i] = this.settings.lights
-        ? lightLevel(
-            this.settings.pattern,
-            this.lightTime,
-            i,
-            this.reduced.matches,
-            0,
-          ) * (this.settings.gold ? 3.3 : 2.5)
-        : 0;
+    this.tree.updateMatrixWorld(true);
+    for (let i = 0; i < 75; i++) {
+      this.projectedLight
+        .fromArray(this.ledPositions, i * 3)
+        .applyMatrix4(this.tree.matrixWorld)
+        .project(this.camera);
+      this.ledWeights[i] =
+        lightLevel(
+          this.settings.pattern,
+          this.lightTime,
+          i + 1,
+          this.reduced.matches,
+          (this.projectedLight.x + 1) / 2,
+        ) * (this.settings.gold ? 3.3 : 2.5);
+    }
     this.ledAttribute.needsUpdate = true;
     if (this.diodeBodies) {
       for (let i = 0; i < 75; i++) {
@@ -573,33 +613,42 @@ export class Actors {
       }
       this.diodeBodies.instanceColor!.needsUpdate = true;
     }
+    const starLevel = lightLevel(
+      this.settings.pattern,
+      this.lightTime,
+      0,
+      this.reduced.matches,
+      this.calibration.front[0] / 512,
+    );
     this.bulbs.forEach(
       (b) =>
-        (b.material.emissiveIntensity = this.settings.lights
-          ? this.ledWeights[0]!
-          : 0),
+        (b.material.emissiveIntensity =
+          starLevel * (this.settings.gold ? 3.3 : 2.5)),
     );
-    if (this.starGlow)
-      this.starGlow.material.opacity = this.settings.lights
-        ? Math.min(0.85, this.ledWeights[0]! * 0.32)
-        : 0;
-    if (this.starLight)
-      this.starLight.intensity = this.settings.lights
-        ? this.ledWeights[0]! * 0.3
-        : 0;
+    if (this.starGlow) this.starGlow.material.opacity = starLevel * 0.8;
+    if (this.starLight) this.starLight.intensity = starLevel * 0.75;
     for (const [i, bulb] of this.architecture.entries()) {
-      const level = this.settings.lights
-        ? lightLevel(
-            this.settings.pattern,
-            this.lightTime,
-            i,
-            this.reduced.matches,
-            Number(bulb.dataset.lightGroup ?? 1),
-          )
-        : 0;
+      const level = lightLevel(
+        this.settings.pattern,
+        this.lightTime,
+        i + 100,
+        this.reduced.matches,
+        parseFloat(bulb.style.left) / 100,
+      );
       bulb.querySelector<HTMLElement>(".bulb-emitter")!.style.opacity =
         String(level);
       bulb.style.setProperty("--intensity", String(level));
+    }
+    if (
+      this.settings.motion &&
+      !this.settings.hidden &&
+      !this.reduced.matches
+    ) {
+      this.onTrainPosition(
+        this.elapsed,
+        (poses[0]!.x - this.calibration.left) / this.calibration.spanX,
+        poses[0]!.z >= this.calibration.tunnelZ,
+      );
     }
     this.renderer.render(this.world, this.camera);
     this.host.dataset.elapsed = this.elapsed.toFixed(3);

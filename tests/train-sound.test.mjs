@@ -3,59 +3,60 @@ import assert from "node:assert/strict";
 import { TrainSound } from "../src/train-sound.ts";
 import { disposeAudio, audioContext } from "../src/audio-engine.ts";
 import { wait, FakeContext } from "./helpers/audio.mjs";
-import { hornDelay } from "../src/train-sound.ts";
-test("horn delays use fresh random values bounded to 20–50 seconds", () => {
-  assert.equal(
-    hornDelay(() => 0),
-    20,
-  );
-  assert.equal(
-    hornDelay(() => 1),
-    50,
-  );
-  assert.equal(
-    hornDelay(() => 0.5),
-    35,
-  );
-  const values = new Set(Array.from({ length: 30 }, () => hornDelay()));
-  assert.ok(values.size > 25);
-  assert.ok([...values].every((x) => x >= 20 && x <= 50));
-});
-test("stop cancels scheduled horns; restart draws a fresh interval without stopping music", async () => {
+test("horn follows visible front-centre crossings, not elapsed time, and deduplicates pause/village changes", async () => {
   const original = globalThis.AudioContext;
   globalThis.AudioContext = FakeContext;
-  let sample = 0;
-  const sound = new TrainSound(
-    () => {},
-    () => sample,
-  );
+  const sound = new TrainSound(() => {});
   try {
     sound.setRunning(true);
     await wait();
     const c = audioContext();
-    assert.equal(sound.diagnostics.running, true);
-    assert.equal(sound.diagnostics.untilHorn, 20);
-    const scheduled = c.oscillators.slice();
-    c.currentTime = 21;
+    c.currentTime = 100;
+    assert.equal(sound.diagnostics.horns, 0, "clock alone must never honk");
+    sound.updatePosition(2, 0.55, true, "cozy");
+    sound.updatePosition(2.8, 0.49, true, "cozy");
+    assert.equal(sound.diagnostics.horns, 1);
+    assert.equal(c.oscillators.length, 3);
+    sound.updatePosition(2.8, 0.49, true, "cozy");
+    sound.updatePosition(2.9, 0.48, true, "cozy");
+    assert.equal(sound.diagnostics.horns, 1);
+    sound.updatePosition(11, 0.52, false, "cozy");
+    sound.updatePosition(11.5, 0.48, false, "cozy");
     assert.equal(sound.diagnostics.horns, 1);
     sound.setRunning(false);
-    assert.ok(scheduled.every((n) => n.stopAt === c.currentTime));
-    const paused = sound.diagnostics;
-    c.currentTime += 100;
-    assert.equal(sound.diagnostics.puffs, paused.puffs);
+    assert.ok(c.oscillators.every((n) => n.stopAt === c.currentTime));
+    const puffs = sound.diagnostics.puffs;
+    c.currentTime += 50;
+    sound.updatePosition(20, 0.52, true, "cozy");
+    sound.updatePosition(21, 0.48, true, "cozy");
     assert.equal(sound.diagnostics.horns, 1);
-    assert.equal(sound.diagnostics.untilHorn, 0);
-    sample = 0.9;
-    const previous = c.oscillators.length;
+    assert.equal(sound.diagnostics.puffs, puffs);
     sound.setRunning(true);
     await wait();
-    assert.equal(sound.diagnostics.untilHorn, 47);
-    assert.ok(
-      c.oscillators
-        .slice(previous)
-        .every((n) => n.startAt >= c.currentTime + 47),
+    sound.updatePosition(21, 0.48, true, "cozy");
+    assert.equal(
+      sound.diagnostics.horns,
+      1,
+      "resume never replays a passed crossing",
     );
-    sound.setRunning(false);
+    sound.updatePosition(38, 0.48, true, "cozy");
+    assert.equal(
+      sound.diagnostics.horns,
+      1,
+      "a large time jump never catches up horns",
+    );
+    sound.updatePosition(38.1, 0.52, true, "cozy");
+    sound.updatePosition(38.5, 0.48, true, "cozy");
+    assert.equal(sound.diagnostics.horns, 2);
+    sound.updatePosition(56, 0.52, true, "cozy");
+    sound.updatePosition(56.5, 0.48, true, "cozy");
+    assert.equal(sound.diagnostics.horns, 3);
+    sound.updatePosition(0, 0.7, true, "forest");
+    sound.updatePosition(2, 0.52, true, "forest");
+    sound.updatePosition(2.8, 0.48, true, "forest");
+    assert.equal(sound.diagnostics.horns, 4);
+    sound.updatePosition(2.8, 0.48, true, "forest");
+    assert.equal(sound.diagnostics.horns, 4);
     assert.equal(c.state, "running");
   } finally {
     sound.destroy();

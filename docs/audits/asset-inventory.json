@@ -1,0 +1,35 @@
+{
+  "assets": [
+    {
+      "name": "christmas-room.png",
+      "sha256": "66653c367cba83ea3262547d819f88281b36b1a04eb2da2ba728235649eddbef",
+      "shipped": true
+    },
+    {
+      "name": "fir-sprig.png",
+      "sha256": "67767364b8945c13a95c82766c418914328fa6b6da8be5856b909a315f36f916",
+      "shipped": true
+    },
+    {
+      "name": "miniature-atlas.png",
+      "sha256": "667521f769667e5c6c0a7fb52f5ce0cd1a48eb81812255c98c8bd3124e541818",
+      "shipped": false
+    },
+    {
+      "name": "product-villages.png",
+      "sha256": "15dbba1cb9b9f82d281f3bc4e0ace3a0493cf2aa4c63308c96d9dfdf13ff6cb6",
+      "shipped": true
+    },
+    {
+      "name": "special-buildings.png",
+      "sha256": "70c92949c0e948179e635196098152bf81cdf4da1f39241ebf75b76ea53be7c6",
+      "shipped": false
+    },
+    {
+      "name": "train-directions.png",
+      "sha256": "00c7046f40a145e56f8f890da22c79be62488933b1025b28e76d238e2192f1b9",
+      "shipped": false
+    }
+  ],
+  "audioFiles": []
+}

@@ -8,3 +8,5 @@
 - Keep all original miniature PNG assets, including currently unused `train-directions.png`, until the user decides their future use. Retired animation is recoverable from commit d7b8cb8.
 - Publish only `dist/` as web preview/Pages content. Never pass credentials as VITE_* variables or bundle environment/key files. Do not deploy PR code to Pages.
 - Read README.md and docs/development.md for the Pages enablement steps, branch inclusion audit, and the remaining old workflow on main before approval.
+
+- Read docs/v2.md for the actual 2.0 app features and limits. Rewarded passes must only follow the SDK earned-reward event; never simulate ad completion in production or grant a pass in web/mock previews. Preserve the explicit locked-preview status and distinguish local receipts from server-verified access.

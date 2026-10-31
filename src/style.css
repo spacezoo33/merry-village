@@ -1,25 +1,1291 @@
-:root{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff1d1;background:#2c160f;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;color-scheme:dark;--gold:#f4ca7e;--cream:#ffedc8}
-*{box-sizing:border-box}body{margin:0;min-width:280px;background:linear-gradient(#24120b42,#190b08a6),url('./assets/christmas-room.png') center/cover fixed}button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}button:focus-visible{outline:3px solid #fff1af;outline-offset:4px}button:active{transform:scale(.94)}
-#app{position:relative;isolation:isolate;max-width:540px;min-height:100svh;margin:0 auto;padding:max(18px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:linear-gradient(180deg,#32180b22,#24100700 40%,#2b100860 100%)}
-.app-header{position:relative;z-index:15;text-align:center;padding:0 52px 0 12px;text-shadow:0 2px 7px #341608}.header-star{display:block;color:#ffdc89;font-size:17px;line-height:1;margin-bottom:3px;filter:drop-shadow(0 0 7px #f9b651)}.eyebrow{font-size:7px;font-weight:650;letter-spacing:2.3px;margin:4px 0;color:#e7cd9d}h1{font-size:clamp(32px,10vw,47px);font-weight:900;line-height:1.2;letter-spacing:-2px;color:#fff2d1;margin:3px 0 6px;text-shadow:0 2px 0 #bd8957,0 4px 0 #673a23,0 5px 8px #1e0a07}.brand-ribbon{display:inline-block;position:relative;background:linear-gradient(#3e6844,#274731);border-top:1px solid #a5af69;border-bottom:2px solid #172b1b;box-shadow:0 3px 8px #190c0660;transform:rotate(-3deg);padding:5px 21px;font-size:10px;font-weight:750;letter-spacing:1.6px;color:#fff2c5;clip-path:polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%)}.subtitle{font-size:11px;margin:10px 0 0;font-weight:550;letter-spacing:.2px;color:#ffebcc}
-.music-box{position:relative;margin-top:-14px}.controls{position:absolute;right:1px;top:-110px;z-index:20;display:flex;flex-direction:column;gap:11px}.control{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:48px;min-height:60px;padding:0;color:#fff2d1;background:none;border:none;font-size:9px;text-shadow:0 1px 3px #1d0907;transition:transform .15s}.control-disc{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;border:1.5px solid #f0bb68;background:radial-gradient(circle at 30% 20%,#a2673c,#61341e 65%,#3b1b10);box-shadow:inset 0 0 0 2px #4b271d,inset 0 2px 8px #f1b57555,0 3px 9px #1d080a77}.control svg{height:24px;width:24px}.control[aria-pressed=true] .control-disc{border-color:#ffe1a5;box-shadow:inset 0 0 0 2px #774a2a,0 0 12px #f8b95466}.control[aria-pressed=false]#snow-toggle{opacity:.6}
-.scene-wrap{position:relative;margin:0 -12px;isolation:isolate}.miniature-stage{position:relative;width:100%;aspect-ratio:1 / 1.2;overflow:hidden}.stage-halo{position:absolute;inset:25% 4% 0;border-radius:50%;background:radial-gradient(ellipse,#edb55325,transparent 65%);pointer-events:none}.scene-object{position:absolute;pointer-events:none;transition:filter .3s}.sprite{display:block;width:100%;height:auto;overflow:hidden;pointer-events:none}.village-buildings{position:absolute;inset:0;z-index:3;pointer-events:none}.ornament.selected{filter:drop-shadow(0 0 3px #ffce7ba0) drop-shadow(0 0 7px #eaa64b60)}
-.object-base{width:100%;left:0;top:44%;z-index:1;filter:drop-shadow(0 12px 10px #170a08a0)}.object-church{width:33%;left:53%;top:10%}.object-house-back{width:34%;left:10%;top:25%}.object-house-left{width:26%;left:1%;top:36%}.object-house-right{width:30%;left:70%;top:35%}.object-tree{width:48%;left:25%;top:14%;z-index:5}.object-pine-back{width:18%;left:7%;top:29%;z-index:3}.object-pine-left{width:21%;left:0;top:45%;z-index:6}.object-pine-right{width:19%;left:82%;top:47%;z-index:6}.object-santa{width:19%;left:47%;top:40%;z-index:8}.object-reindeer{width:16%;left:66%;top:37%;z-index:7}.object-snowman{width:18%;left:77%;top:47%;z-index:9}
-.tree-lights{position:absolute;left:25%;top:14%;width:48%;height:43%;z-index:6;pointer-events:none}.tree-lights i{position:absolute;left:48%;top:14%;width:4px;height:4px;border-radius:50%;background:#fff1a8;box-shadow:0 0 5px 2px #ffd063,0 0 13px #ffba36;animation:twinkle 3.8s ease-in-out infinite alternate}.tree-lights i:nth-child(2){left:38%;top:39%;animation-delay:-1s}.tree-lights i:nth-child(3){left:61%;top:52%;animation-delay:-2.7s}.tree-lights i:nth-child(4){left:28%;top:67%;animation-delay:-.5s}.tree-lights i:nth-child(5){left:64%;top:79%;animation-delay:-1.8s}.tree-lights i:nth-child(6){left:43%;top:90%;animation-delay:-3s}@keyframes twinkle{from{opacity:.25}to{opacity:1}}
-.snowfall{position:absolute;inset:0 0 12%;overflow:hidden;pointer-events:none;z-index:13;mask-image:linear-gradient(transparent,#000 10%,#000 85%,transparent)}.snowfall i{position:absolute;top:-8px;left:var(--x);width:var(--size);height:var(--size);border-radius:50%;background:#fffaed;box-shadow:0 0 3px #fff1cc80;animation:snow-fall var(--duration) var(--delay) linear infinite}.snow-off .snowfall{visibility:hidden}.snow-off .snowfall i{animation-play-state:paused}@keyframes snow-fall{from{transform:translate(0,-10px);opacity:0}12%{opacity:.8}90%{opacity:.65}to{transform:translate(20px,550px);opacity:0}}
-.decoration-section{position:relative;z-index:15;margin-top:-30px;padding:0 0 3px}.decoration-menu{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}.decoration-button{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:81px;padding:5px 3px 9px;gap:3px;border-radius:20px;border:1.5px solid #b98b5c;background:linear-gradient(145deg,#fff5dd,#f2d7ae);color:#643a23;box-shadow:inset 0 2px 1px #fffaf0,0 4px 0 #614027,0 7px 12px #180a0980;transition:transform .15s,border-color .2s,box-shadow .2s}.menu-art{width:100%;height:46px;display:flex;align-items:center;justify-content:center}.menu-art .sprite{width:100%;height:46px}.decoration-label{font-size:12px;font-weight:750;letter-spacing:-.4px}.decoration-button[aria-pressed=true]{border-color:#ffe39b;box-shadow:inset 0 0 0 2px #ffefbf,0 0 0 1px #e7a344,0 0 18px #ffb335a0,0 5px 8px #180a0980;background:linear-gradient(145deg,#fff7dd,#f5d598)}.selection-note{margin:13px 0 0;text-align:center;font-size:10px;line-height:1.5;color:#fff0ce;text-shadow:0 1px 3px #2b1009}.music-note{text-align:center;font-size:10px;line-height:1.5;min-height:15px;margin:6px 0 0;color:#e6c9a5;text-shadow:0 1px 3px #2b1009}
-.night-theme body{background-image:linear-gradient(#08152a90,#120b12c0),url('./assets/christmas-room.png')}.night .miniature-stage{filter:brightness(.82) saturate(.92)}.night .object-tree,.night .object-church,.night .object-house-back,.night .object-house-left,.night .object-house-right{filter:brightness(1.17) drop-shadow(0 0 5px #efb95830)}.night .ornament.selected{filter:brightness(1.15) drop-shadow(0 0 7px #ffd27ea0)}.night .tree-lights{filter:brightness(1.5)}
-@media(min-width:600px){#app{padding-top:22px;padding-bottom:24px}.app-header{padding-right:75px}h1{font-size:47px}.eyebrow{font-size:8px}.subtitle{font-size:13px}.controls{right:10px;gap:15px;top:-115px}.control-disc{width:48px;height:48px}.control{font-size:10px}.decoration-button{min-height:95px}.menu-art,.menu-art .sprite{height:58px}.decoration-label{font-size:14px}}
-@media(max-width:350px){#app{padding-top:max(12px,env(safe-area-inset-top))}.app-header{padding-right:48px;padding-left:0}.eyebrow{font-size:6px;letter-spacing:1.5px}.subtitle{font-size:10px}.controls{gap:7px;top:-102px}.control{min-height:57px;font-size:8px}.decoration-menu{gap:5px}.decoration-button{border-radius:16px;min-height:73px}.menu-art,.menu-art .sprite{height:39px}.decoration-label{font-size:11px}.selection-note,.music-note{font-size:9px}.decoration-section{margin-top:-22px}}
-@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}.snowfall i{top:var(--y);opacity:.65}}
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #fff0d5;
+  background: #26150f;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
+  --gold: #e9c28b;
+  --cream: #fff0d7;
+  --ink: #563927;
+  --muted: #cbb298;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 280px;
+  background:
+    linear-gradient(#24120b58, #190b08b8),
+    url("./assets/christmas-room.png") center/cover fixed;
+}
+button,
+input {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #f6d896;
+  outline-offset: 3px;
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+button svg {
+  width: 23px;
+  height: 23px;
+  flex: none;
+}
+button {
+  color: inherit;
+}
+button,
+svg {
+  vertical-align: middle;
+}
+button[hidden],
+[hidden] {
+  display: none !important;
+}
+#app {
+  max-width: 560px;
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: max(22px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(#31190b33, transparent 40%, #1e10086b);
+}
+.app-header {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.eyebrow {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--gold);
+  margin: 0 0 7px;
+}
+h1 {
+  font-size: 28px;
+  letter-spacing: -1.5px;
+  line-height: 1.2;
+  margin: 0;
+  color: #fff1d9;
+  text-shadow: 0 2px 3px #381c0d;
+}
+h1 span {
+  display: inline-block;
+  font-size: 9px;
+  letter-spacing: 0;
+  margin-left: 8px;
+  padding: 3px 5px;
+  border: 1px solid #98764c;
+  border-radius: 6px;
+  color: #e3c99f;
+  vertical-align: middle;
+}
+.pass-pill {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 24px;
+  border: 1px solid #b18b58;
+  background: #52351f9c;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.pass-pill svg {
+  width: 15px;
+  height: 15px;
+  color: #efcb83;
+}
+.pass-pill.active {
+  background: #405b41;
+  border-color: #b5c38e;
+}
+.experience {
+  position: relative;
+}
+.village-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 10px;
+  color: #e5d2b4;
+  letter-spacing: 0.3px;
+  margin: 26px 0 0;
+}
+.tiny-star {
+  font-size: 9px;
+  color: #dab77e;
+}
+.hero {
+  position: relative;
+  margin: -17px -18px -5px;
+  isolation: isolate;
+}
+.miniature-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1.2;
+  overflow: hidden;
+}
+.scene-object {
+  position: absolute;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 3px #170b0925);
+}
+.sprite {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+.asset-base {
+  filter: drop-shadow(0 14px 9px #170b0899);
+}
+.tree-lights {
+  position: absolute;
+  left: 25%;
+  top: 14%;
+  width: 48%;
+  height: 43%;
+  z-index: 701;
+  pointer-events: none;
+}
+.tree-lights i {
+  position: absolute;
+  left: 48%;
+  top: 14%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fff0a3;
+  box-shadow: 0 0 6px 2px #f3bc55;
+  animation: twinkle 4s ease-in-out infinite alternate;
+}
+.tree-lights i:nth-child(2) {
+  left: 38%;
+  top: 39%;
+  animation-delay: -1s;
+}
+.tree-lights i:nth-child(3) {
+  left: 61%;
+  top: 52%;
+  animation-delay: -2.7s;
+}
+.tree-lights i:nth-child(4) {
+  left: 28%;
+  top: 67%;
+  animation-delay: -0.5s;
+}
+.tree-lights i:nth-child(5) {
+  left: 64%;
+  top: 79%;
+  animation-delay: -1.8s;
+}
+.tree-lights i:nth-child(6) {
+  left: 43%;
+  top: 90%;
+  animation-delay: -3s;
+}
+@keyframes twinkle {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.layout-forest .tree-lights {
+  top: 19%;
+}
+.layout-chapel .tree-lights,
+.layout-workshop .tree-lights,
+.layout-palace .tree-lights,
+.layout-gingerbread .tree-lights {
+  display: none;
+}
+.scene-controls {
+  position: absolute;
+  right: 14px;
+  top: 34px;
+  z-index: 1350;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.scene-controls button {
+  width: 44px;
+  min-height: 53px;
+  border: 1px solid #ba925e;
+  border-radius: 17px;
+  background: linear-gradient(150deg, #86542eeb, #40251be8);
+  box-shadow:
+    inset 0 1px 1px #eac18e88,
+    0 3px 9px #13080966;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 8px;
+  color: #fbe8c8;
+}
+.scene-controls svg {
+  width: 19px;
+  height: 19px;
+}
+.scene-controls button[aria-pressed="true"] {
+  border-color: #f6d99a;
+  box-shadow: 0 0 9px #f4bf4c33;
+}
+.scene-controls #snow-toggle[aria-pressed="false"] {
+  opacity: 0.6;
+}
+.snowfall {
+  position: absolute;
+  inset: 3% 0 10%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1300;
+  mask-image: linear-gradient(transparent, #000 10%, #000 85%, transparent);
+}
+.snowfall i {
+  position: absolute;
+  top: -8px;
+  left: var(--x);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: #fff9e9;
+  box-shadow: 0 0 3px #fff1cc80;
+  animation: snow-fall var(--duration) var(--delay) linear infinite;
+}
+.snow-off .snowfall {
+  visibility: hidden;
+}
+.snow-off .snowfall i {
+  animation-play-state: paused;
+}
+@keyframes snow-fall {
+  from {
+    transform: translate(0, -10px);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.65;
+  }
+  to {
+    transform: translate(20px, 650px);
+    opacity: 0;
+  }
+}
+.scene-caption {
+  text-align: center;
+  position: relative;
+  margin-top: -16px;
+  padding: 0 4px;
+  z-index: 10;
+}
+.scene-kicker {
+  font-size: 7px;
+  letter-spacing: 2.5px;
+  color: #cbb28a;
+  margin: 0 0 7px;
+}
+.scene-caption h2 {
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.6px;
+  margin: 0;
+  color: #fce9c8;
+}
+.scene-caption #effect-name {
+  font-size: 10px;
+  color: #c8b297;
+  margin: 8px 0 0;
+  line-height: 1.5;
+  min-height: 15px;
+}
+.preview-ribbon {
+  position: absolute;
+  bottom: 3%;
+  left: 16px;
+  right: 16px;
+  z-index: 1400;
+  text-align: center;
+  border: 1px solid #e6ba78;
+  background: #3f291be8;
+  border-radius: 12px;
+  padding: 8px;
+  font-size: 9px;
+  line-height: 1.5;
+  box-shadow: 0 2px 8px #17090966;
+}
+.preview-ribbon button {
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  color: #ffdda0;
+  font-size: 10px;
+  min-height: 44px;
+  padding: 3px 8px;
+}
+.now-playing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 24px 0 18px;
+  padding: 11px 12px;
+  border: 1px solid #9c754944;
+  border-radius: 20px;
+  background: linear-gradient(120deg, #67462d66, #33221880);
+  box-shadow: inset 0 1px 0 #e9c78d11;
+}
+.round-play {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #bf9662;
+  border-radius: 50%;
+  background: linear-gradient(#9b6c3a, #634021);
+  color: #fff0d1;
+  flex: none;
+}
+.round-play svg {
+  width: 17px;
+  height: 17px;
+}
+.song-detail {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.song-overline {
+  font-size: 7px;
+  letter-spacing: 2px;
+  color: #c3a87c;
+}
+.song-detail strong {
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+#music-status {
+  font-size: 9px;
+  color: #c6af93;
+  line-height: 1.4;
+}
+.song-list {
+  width: 44px;
+  min-height: 44px;
+  flex: none;
+  background: none;
+  border: 0;
+  color: #cfb388;
+}
+.song-list svg {
+  width: 18px;
+  height: 18px;
+}
+.bottom-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  position: relative;
+  z-index: 20;
+}
+.bottom-nav button {
+  min-width: 0;
+  min-height: 75px;
+  border: 1px solid #c59b69;
+  border-radius: 19px;
+  background: linear-gradient(140deg, #fff3dc, #ebcfa9);
+  color: #60412d;
+  box-shadow:
+    inset 0 1px 1px #fffaf0,
+    0 3px 0 #6b472b,
+    0 6px 12px #14080766;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 650;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.bottom-nav svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.4;
+}
+.bottom-nav button[aria-expanded="true"] {
+  box-shadow:
+    0 0 0 2px #ffe4a5,
+    0 0 15px #efb95f77;
+}
+.bottom-note {
+  text-align: center;
+  font-size: 9px;
+  color: #bca387;
+  letter-spacing: 0.2px;
+  margin: 22px 0 0;
+}
+.night-theme body {
+  background-image:
+    linear-gradient(#08132996, #120b12bd), url("./assets/christmas-room.png");
+}
+.night #scene-host {
+  filter: brightness(0.82) saturate(0.94);
+}
+.night .tree-lights {
+  filter: brightness(1.4);
+}
+#app[data-village="forest"] .hero {
+  background: radial-gradient(ellipse at 50% 60%, #78a48b22, transparent 70%);
+}
+#app[data-village="palace"] .hero {
+  background: radial-gradient(ellipse at 50% 50%, #68bfd12e, transparent 70%);
+}
+.night-effects {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: -1;
+  pointer-events: none;
+}
+.aurora,
+.meteors,
+.wishes {
+  display: none;
+}
+#app[data-effect="aurora"] .aurora {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    125deg,
+    transparent 15%,
+    #59e2b03b 30%,
+    #b193e966 43%,
+    #67cad23b 55%,
+    transparent 70%
+  );
+  filter: blur(20px);
+  transform: skewY(-20deg);
+  animation: aurora 12s ease-in-out infinite alternate;
+}
+#app[data-effect="shooting"] .meteors {
+  display: block;
+}
+#app[data-effect="wishes"] .wishes {
+  display: block;
+}
+.meteors i {
+  position: absolute;
+  left: 65%;
+  top: 10%;
+  width: 70px;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, #fff5ca);
+  transform: rotate(-35deg);
+  animation: meteor 7s ease-in infinite;
+  opacity: 0;
+  box-shadow: 0 0 4px #fff0ad;
+}
+.meteors i:nth-child(2) {
+  left: 40%;
+  top: 30%;
+  animation-delay: -2.5s;
+}
+.meteors i:nth-child(3) {
+  left: 90%;
+  top: 40%;
+  animation-delay: -4.5s;
+}
+.wishes i {
+  position: absolute;
+  left: var(--left);
+  bottom: 2%;
+  width: 7px;
+  height: 10px;
+  border-radius: 4px;
+  background: #ffdb8c;
+  box-shadow: 0 0 8px 3px #f9c76677;
+  animation: wishes var(--duration) var(--delay) linear infinite;
+  opacity: 0;
+}
+@keyframes aurora {
+  to {
+    transform: skewY(10deg) translateX(12%);
+    opacity: 0.6;
+  }
+}
+@keyframes meteor {
+  0%,
+  65%,
+  100% {
+    opacity: 0;
+    translate: 0 0;
+  }
+  75% {
+    opacity: 0.9;
+  }
+  88% {
+    opacity: 0;
+    translate: -200px 130px;
+  }
+}
+@keyframes wishes {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.7);
+  }
+  15% {
+    opacity: 0.8;
+  }
+  85% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-400px) scale(1.1);
+  }
+}
+.ambient-paused *,
+.ambient-paused *:before,
+.ambient-paused *:after {
+  animation-play-state: paused !important;
+}
+.sheet {
+  position: fixed;
+  inset: auto 0 0;
+  margin: 0 auto;
+  width: min(100%, 560px);
+  max-width: 560px;
+  max-height: min(90svh, 880px);
+  padding: 0;
+  border: 1px solid #b69665;
+  border-bottom: 0;
+  border-radius: 28px 28px 0 0;
+  background: #faf2e4;
+  color: var(--ink);
+  overflow: auto;
+  box-shadow: 0 -15px 60px #10080677;
+  color-scheme: light;
+}
+.sheet::backdrop {
+  background: #130c08b8;
+  backdrop-filter: blur(4px);
+}
+.sheet-shell {
+  padding: 22px max(20px, env(safe-area-inset-right))
+    max(28px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+}
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 17px;
+}
+.sheet-header .eyebrow {
+  color: #ad8857;
+  font-size: 7px;
+}
+.sheet-header h2 {
+  font-size: 21px;
+  letter-spacing: -0.7px;
+  margin: 0;
+  line-height: 1.35;
+}
+.close-button {
+  height: 44px;
+  width: 44px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid #d8c5a7;
+  background: #fff8ec;
+  color: #876c4a;
+  display: grid;
+  place-items: center;
+}
+.close-button svg {
+  height: 18px;
+  width: 18px;
+}
+.sheet-description {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #917957;
+  margin: 0 0 19px;
+  word-break: keep-all;
+}
+.sheet button:focus-visible,
+.sheet input:focus-visible {
+  outline-color: #8f632d;
+}
+.small-note {
+  font-size: 10px;
+  line-height: 1.8;
+  color: #998569;
+  text-align: center;
+  margin: 15px 0 0;
+  word-break: keep-all;
+}
+.wide-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 47px;
+  border-radius: 14px;
+  border: 1px solid #c8ae85;
+  background: #fff9ed;
+  color: #7a5631;
+  font-size: 12px;
+  font-weight: 650;
+  padding: 10px 12px;
+  margin-top: 18px;
+}
+.wide-button.gold {
+  background: linear-gradient(120deg, #9a6838, #6b4327);
+  color: #fff1cf;
+  border-color: #c5a170;
+  box-shadow:
+    inset 0 1px 0 #e2c39488,
+    0 3px 7px #64402722;
+}
+.wide-button svg {
+  height: 18px;
+  width: 18px;
+}
+.text-button {
+  min-height: 44px;
+  display: block;
+  margin: 10px auto 0;
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  color: #8b6b42;
+  font-size: 12px;
+}
+.village-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.village-card {
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  border: 1px solid #decdaf;
+  background: #fffbf4;
+  border-radius: 18px;
+  overflow: hidden;
+  color: var(--ink);
+}
+.village-card[aria-pressed="true"] {
+  border-color: #a8793e;
+  box-shadow: 0 0 0 2px #c9a66766;
+}
+.card-art {
+  display: block;
+  position: relative;
+  background: radial-gradient(ellipse at center, #846343, #33241c);
+  overflow: hidden;
+  aspect-ratio: 1 / 1.04;
+}
+.card-art .miniature-stage {
+  position: absolute;
+  inset: -5% -2% 0;
+  width: 104%;
+}
+.card-art .tree-lights {
+  display: none;
+}
+.card-forest {
+  background: radial-gradient(ellipse, #729185, #243f35);
+}
+.card-palace {
+  background: radial-gradient(ellipse, #849daf, #2c3f54);
+}
+.card-gingerbread {
+  background: radial-gradient(ellipse, #b18b65, #68462d);
+}
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px 10px 13px;
+}
+.card-body strong {
+  font-size: 12px;
+  letter-spacing: -0.4px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+.card-body > span:last-child {
+  font-size: 9px;
+  color: #9c866a;
+  line-height: 1.6;
+}
+.card-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: #7c8963;
+}
+.card-badge svg {
+  height: 12px;
+  width: 12px;
+}
+.card-badge.premium {
+  color: #ae8546;
+}
+.tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 67px;
+  text-align: left;
+  padding: 11px 13px;
+  border: 1px solid #e1d1b7;
+  border-radius: 15px;
+  background: #fffaf1;
+  color: var(--ink);
+}
+.track-number {
+  font-size: 11px;
+  color: #b29974;
+  font-variant-numeric: tabular-nums;
+}
+.track-row > span:nth-child(2) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+}
+.track-row strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.track-row small {
+  font-size: 10px;
+  color: #a38a66;
+}
+.track-note {
+  color: #b89b70;
+}
+.track-note svg {
+  height: 18px;
+  width: 18px;
+}
+.track-row[aria-pressed="true"] {
+  background: #efe6d2;
+  border-color: #bc9e69;
+}
+.track-row[aria-pressed="true"] .track-note {
+  color: #8e632f;
+}
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 21px 0 0;
+  font-size: 11px;
+  color: #876e4e;
+}
+.volume-control input {
+  flex: 1;
+  width: 40px;
+  accent-color: #8d6337;
+  min-height: 44px;
+}
+.volume-control output {
+  width: 30px;
+  font-size: 10px;
+}
+.volume-control .round-play {
+  width: 44px;
+  height: 44px;
+}
+.basic-night {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #ddcaaa;
+  background: #fffaf1;
+  border-radius: 17px;
+  text-align: left;
+  color: var(--ink);
+}
+.basic-night > span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.basic-night strong {
+  font-size: 13px;
+}
+.basic-night small {
+  font-size: 10px;
+  color: #9b8565;
+}
+.night-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-top: 12px;
+}
+.night-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 105px;
+  padding: 13px 11px;
+  border: 1px solid #d7c4a5;
+  border-radius: 18px;
+  text-align: left;
+  background: #fffaf1;
+  color: var(--ink);
+}
+.night-card > span:nth-child(2) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.night-card strong {
+  font-size: 13px;
+}
+.night-card small {
+  font-size: 10px;
+  color: #927a59;
+  line-height: 1.6;
+}
+.night-card em {
+  font-size: 9px;
+  font-style: normal;
+  color: #af8750;
+}
+.night-card > svg {
+  width: 16px;
+  height: 16px;
+  color: #ae8a56;
+}
+.night-card[aria-pressed="true"] {
+  border-color: #a97c3d;
+  box-shadow: 0 0 0 1px #c6a87866;
+}
+.night-swatch {
+  display: grid;
+  place-items: center;
+  width: 53px;
+  height: 65px;
+  border-radius: 14px;
+  color: #f5e8c9;
+  background: #314055;
+  flex: none;
+}
+.night-aurora .night-swatch {
+  background: linear-gradient(130deg, #143f40, #55a298, #8e78ac);
+}
+.night-shooting .night-swatch {
+  background: linear-gradient(130deg, #1c293f, #5f6d88);
+}
+.night-wishes .night-swatch {
+  background: linear-gradient(130deg, #492d26, #b17d42);
+}
+.night-swatch svg {
+  width: 28px;
+  height: 28px;
+}
+.pass-hero {
+  text-align: center;
+  padding: 2px 0 12px;
+}
+.pass-seal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  height: 130px;
+  margin: 0 auto 18px;
+  border: 1px solid #bea06b;
+  outline: 1px solid #d1b47d;
+  outline-offset: 4px;
+  border-radius: 55px 55px 24px 24px;
+  background: linear-gradient(145deg, #ead4a2, #b1874c);
+  color: #67421e;
+  box-shadow:
+    inset 0 1px 1px #fff1c9,
+    0 7px 20px #a17a3a33;
+}
+.pass-seal svg {
+  height: 18px;
+  width: 18px;
+}
+.pass-seal strong {
+  font-family: Georgia, serif;
+  font-size: 55px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+.pass-seal small {
+  font-size: 6px;
+  letter-spacing: 1.5px;
+}
+.pass-hero h3 {
+  font-size: 20px;
+  letter-spacing: -0.6px;
+  margin: 0 0 10px;
+}
+.pass-hero p {
+  font-size: 12px;
+  line-height: 1.9;
+  color: #917851;
+  margin: 0;
+}
+.benefits {
+  list-style: none;
+  padding: 18px 16px;
+  margin: 0;
+  border: 1px solid #e0caaa;
+  border-radius: 17px;
+  background: #fff9ec;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.benefits li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+}
+.benefits svg {
+  width: 16px;
+  height: 16px;
+  color: #9c7a43;
+}
+.ad-status {
+  font-size: 11px;
+  line-height: 1.8;
+  text-align: center;
+  color: #98754b;
+  margin: 14px 4px 0;
+  word-break: keep-all;
+}
+.photo-preview {
+  overflow: hidden;
+  border: 1px solid #dac29d;
+  border-radius: 19px;
+  background: #493323;
+  min-height: 220px;
+}
+.photo-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 57svh;
+  object-fit: contain;
+}
+.photo-loading {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  font-size: 12px;
+  color: #e8d0ac;
+}
+.photo-loading svg {
+  height: 36px;
+  width: 36px;
+}
+.photo-actions {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 8px;
+}
+.toast {
+  position: fixed;
+  bottom: max(25px, env(safe-area-inset-bottom));
+  left: 50%;
+  width: max-content;
+  max-width: min(90vw, 480px);
+  transform: translate(-50%, 20px);
+  background: #302117f2;
+  border: 1px solid #a88b5e;
+  border-radius: 14px;
+  color: #fff0d2;
+  padding: 13px 17px;
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  pointer-events: none;
+}
+.toast.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+@media (min-width: 600px) {
+  #app {
+    padding-top: 30px;
+    padding-bottom: 25px;
+  }
+  .app-header h1 {
+    font-size: 34px;
+  }
+  .pass-pill {
+    font-size: 12px;
+    padding: 10px 13px;
+  }
+  .village-heading {
+    font-size: 12px;
+    margin-top: 29px;
+  }
+  .hero {
+    margin-top: -22px;
+  }
+  .scene-caption h2 {
+    font-size: 23px;
+  }
+  .scene-caption #effect-name {
+    font-size: 12px;
+  }
+  .bottom-nav button {
+    font-size: 12px;
+    min-height: 84px;
+  }
+  .now-playing {
+    margin-top: 26px;
+  }
+  .song-detail strong {
+    font-size: 14px;
+  }
+  #music-status {
+    font-size: 11px;
+  }
+  .scene-controls {
+    right: 20px;
+    top: 45px;
+  }
+  .scene-controls button {
+    width: 47px;
+    min-height: 58px;
+    font-size: 9px;
+  }
+}
+@media (max-width: 350px) {
+  #app {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+  .hero {
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+  h1 {
+    font-size: 25px;
+  }
+  .eyebrow {
+    font-size: 7px;
+    letter-spacing: 1.4px;
+  }
+  .pass-pill {
+    font-size: 9px;
+    padding: 7px 8px;
+  }
+  .pass-pill svg {
+    width: 13px;
+    height: 13px;
+  }
+  .village-heading {
+    font-size: 9px;
+    gap: 6px;
+    margin-top: 22px;
+  }
+  .scene-controls {
+    right: 8px;
+    top: 29px;
+    gap: 7px;
+  }
+  .scene-controls button {
+    width: 44px;
+    min-height: 49px;
+    font-size: 8px;
+  }
+  .scene-caption h2 {
+    font-size: 17px;
+  }
+  .scene-caption #effect-name {
+    font-size: 9px;
+  }
+  .now-playing {
+    padding: 9px 10px;
+    gap: 7px;
+    margin-top: 20px;
+  }
+  .song-detail strong {
+    font-size: 11px;
+  }
+  #music-status {
+    font-size: 8px;
+  }
+  .bottom-nav {
+    gap: 6px;
+  }
+  .bottom-nav button {
+    font-size: 9px;
+    min-height: 68px;
+    border-radius: 16px;
+  }
+  .bottom-nav svg {
+    height: 22px;
+    width: 22px;
+  }
+  .sheet-shell {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+  .sheet-header h2 {
+    font-size: 18px;
+  }
+  .village-grid {
+    gap: 9px;
+  }
+  .card-body {
+    padding: 10px 8px;
+  }
+  .card-body strong {
+    font-size: 11px;
+  }
+  .card-body > span:last-child {
+    font-size: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *:before,
+  *:after {
+    transition: none !important;
+    animation: none !important;
+  }
+  .snowfall i {
+    top: var(--y);
+    opacity: 0.65;
+  }
+  .meteors i {
+    opacity: 0.7;
+  }
+  .wishes i {
+    opacity: 0.6;
+    bottom: var(--left);
+  }
+  .aurora {
+    opacity: 0.8;
+  }
+}
 
-.ambient-paused .snowfall i,.ambient-paused .tree-lights i{animation-play-state:paused}
+.sheet-feedback {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #65764e;
+  background: #e8ecd9;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 13px 0 0;
+}
+.sheet-feedback:empty {
+  display: none;
+}
 
-/* Preserve the established miniature composition with a static train. */
-.village-buildings{display:contents}
-.village-buildings.selected .scene-object{filter:drop-shadow(0 0 5px #ffce7b90)}
-.object-church{z-index:578}.object-house-back{z-index:640}.object-house-left{z-index:685}.object-house-right{z-index:712}
-.object-tree{z-index:700}.object-santa{z-index:735}.object-reindeer{z-index:730}.object-snowman{z-index:840}
-.object-pine-back{z-index:584}.object-pine-left{z-index:816}.object-pine-right{z-index:814}
-.tree-lights{z-index:701}.snowfall{z-index:1300}
-.object-train{width:56%;left:15%;top:50.5%;z-index:880}
+.sheet-header {
+  position: sticky;
+  top: 0;
+  background: #faf2e4;
+  z-index: 5;
+  padding: 8px 0;
+}
+
+.preview-ribbon {
+  position: relative;
+  inset: auto;
+  margin: 12px 0 0;
+  padding: 0 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.preview-ribbon span {
+  flex: 1;
+  text-align: left;
+}
+.preview-ribbon button {
+  flex: none;
+  white-space: nowrap;
+}
+.night-effects {
+  mask-image: linear-gradient(transparent, #000 15%, #000 75%, transparent);
+}

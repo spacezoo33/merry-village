@@ -7,7 +7,7 @@ export const LIGHT_PATTERNS = [
   {
     id: "alternate",
     name: "교차 점멸",
-    description: "빨강·금색·초록 그룹이 번갈아 빛나요",
+    description: "트리·건물·가로등 그룹이 번갈아 빛나요",
   },
   {
     id: "random",
@@ -27,6 +27,7 @@ export function lightLevel(
   time: number,
   index: number,
   reduced = false,
+  group = index % 3,
 ): number {
   if (reduced) return 0.78;
   const smooth = (phase: number) => (1 + Math.sin(phase)) / 2;
@@ -36,7 +37,7 @@ export function lightLevel(
   };
   if (pattern === "all") return plateau((time * Math.PI) / 3);
   if (pattern === "alternate")
-    return plateau((time * Math.PI) / 3 + ((index % 3) * Math.PI * 2) / 3);
+    return plateau((time * Math.PI) / 3 + (group * Math.PI * 2) / 3);
   if (pattern === "random")
     return smooth(time * (0.85 + (index % 7) * 0.055) + index * 2.3999) ** 2.3;
   return index % 3 === 0
@@ -65,6 +66,6 @@ export function lightLabel(state: {
         all: "전체 점멸",
         alternate: "교차 점멸",
         random: "랜덤 점멸",
-        gentle: "은은한 빛",
+        gentle: "은은한 반짝임",
       }[state.lightPattern];
 }

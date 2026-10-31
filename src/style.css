@@ -332,30 +332,6 @@ h1 span {
   line-height: 1.5;
   min-height: 15px;
 }
-.preview-ribbon {
-  position: absolute;
-  bottom: 3%;
-  left: 16px;
-  right: 16px;
-  z-index: 1400;
-  text-align: center;
-  border: 1px solid #e6ba78;
-  background: #3f291be8;
-  border-radius: 12px;
-  padding: 8px;
-  font-size: 9px;
-  line-height: 1.5;
-  box-shadow: 0 2px 8px #17090966;
-}
-.preview-ribbon button {
-  background: none;
-  border: 0;
-  text-decoration: underline;
-  color: #ffdda0;
-  font-size: 10px;
-  min-height: 44px;
-  padding: 3px 8px;
-}
 .now-playing {
   display: flex;
   align-items: center;
@@ -1268,24 +1244,6 @@ h1 span {
   padding: 8px 0;
 }
 
-.preview-ribbon {
-  position: relative;
-  inset: auto;
-  margin: 12px 0 0;
-  padding: 0 9px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-.preview-ribbon span {
-  flex: 1;
-  text-align: left;
-}
-.preview-ribbon button {
-  flex: none;
-  white-space: nowrap;
-}
 .night-effects {
   mask-image: linear-gradient(transparent, #000 15%, #000 75%, transparent);
 }
@@ -1862,4 +1820,49 @@ h1 span {
 }
 #app[data-effect="wishes"] .bulb-emitter {
   box-shadow: 0 0 8px 2px var(--bulb-color);
+}
+
+/* The control keeps one fixed name; the current pattern is its tooltip. */
+#lights-label {
+  font-size: 10px;
+}
+/* Snow belongs to the main scene, never to cards or an open menu. */
+.sheet .snowfall {
+  display: none !important;
+}
+.sheet-open .hero .snowfall {
+  visibility: hidden;
+}
+.sheet-open .hero .snowfall i {
+  animation-play-state: paused;
+}
+
+/* Local emitter patches dim baked-in light only at measured lamp/window centres. */
+.architectural-lights .decor-bulb.window,
+.architectural-lights .decor-bulb.lamp {
+  width: var(--light-w);
+  height: var(--light-h);
+  margin: 0;
+  transform: translate(-50%, -50%);
+  border-radius: 35%;
+  background: rgb(30 18 10 / calc(0.76 * (1 - var(--intensity, 1))));
+}
+.decor-bulb.window:before,
+.decor-bulb.lamp:before {
+  display: none;
+}
+.decor-bulb.window .bulb-emitter,
+.decor-bulb.lamp .bulb-emitter {
+  inset: 0;
+  border-radius: 35%;
+  background: radial-gradient(ellipse, #fff1bcbb, #ffb44844 65%, transparent);
+  box-shadow:
+    0 0 8px 2px #ffc16499,
+    0 4px 14px 5px #ffad3a33;
+}
+#app[data-effect="wishes"]
+  .architectural-lights
+  .decor-bulb:is(.window, .lamp) {
+  width: var(--light-w);
+  height: var(--light-h);
 }

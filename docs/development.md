@@ -47,7 +47,7 @@
 1. 저장소 **Settings → Pages**를 엽니다.
 2. **Build and deployment → Source → GitHub Actions**를 선택합니다. 기존 커스텀 도메인이 있으면 유지합니다.
 3. **Settings → Secrets and variables → Actions → Variables → New repository variable**로 이동합니다.
-4. 이름 `ENABLE_PAGES`, 값 `true`로 저장합니다. Secret이 아닌 일반 변수입니다.
+4. 현재 개발 브랜치의 Pages 작업에는 `ENABLE_PAGES` 변수가 필요하지 않습니다. Pages의 Source를 GitHub Actions로 설정하세요.
 5. `github-pages` 환경이 있으면 **Settings → Environments → github-pages → Deployment branches and tags**를 확인합니다. 제한이 걸려 있으면 **Selected branches and tags → Add deployment branch or tag rule → Branch**에서 `feat/elliptical-train-ride`를 허용합니다. 환경이 아직 없으면 첫 배포 후 만들어질 수 있습니다.
 6. **Actions → 기존 Build web preview and AIT 또는 변경된 Build web preview → Run workflow**에서 브랜치를 **feat/elliptical-train-ride**로 선택해 실행합니다. 기존 `build.yml`은 main에 이미 있어 해당 경로의 수동 실행에서 개발 브랜치를 선택할 수 있습니다. 이름은 기본 브랜치 버전에 따라 다르게 표시될 수 있습니다.
 7. **build** job의 웹 검증 및 ZIP 업로드, **pages** job의 배포 성공을 확인합니다. 보호 환경이면 **Review deployments**에서 승인합니다.

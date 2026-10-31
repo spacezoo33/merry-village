@@ -84,7 +84,7 @@ app.innerHTML = `
    )
    .join("")}</div>
  <p class="graphics-status" id="graphics-status" role="status"></p>
- </div><div class="preview-ribbon" id="preview-ribbon" hidden><span>특별 콘텐츠 미리보기 · 이용권은 지급되지 않아요</span><button data-action="exit-preview">돌아가기</button></div>
+ </div>
  <div class="now-playing"><div class="song-detail"><strong id="song-name"></strong><div class="song-timeline"><input id="progress" type="range" min="0" max="100" value="0" step="0.1" aria-label="음악 재생 위치"><span id="music-time">0:00 / 0:00</span></div><span id="music-status" role="status"></span></div><button class="transport" data-action="previous" aria-label="이전 곡">${icon("play")}</button><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button><button class="transport" data-action="next" aria-label="다음 곡">${icon("play")}</button></div>
  </main><nav class="bottom-nav" aria-label="메인 메뉴">${nav.map((item) => `<button data-action="${item.id}" aria-label="${item.label}" aria-expanded="false">${icon(item.icon)}<span>${item.label}</span></button>`).join("")}</nav>
  <dialog class="sheet" id="sheet" aria-labelledby="sheet-title"><div class="sheet-shell"><header class="sheet-header"><div><p class="eyebrow">MERRY VILLAGE</p><h2 id="sheet-title"></h2></div><button class="close-button" data-action="close" aria-label="닫기">${icon("close")}</button></header><div id="sheet-content"></div><p id="sheet-feedback" class="sheet-feedback" role="status" aria-live="polite"></p></div></dialog>
@@ -143,7 +143,19 @@ const player = new MusicPlayer(
     musicState = state;
     updateMusic();
   },
+  () => changeTrack(1),
 );
+player.setRepeat(preferences.repeat);
+function changeTrack(direction: number) {
+  const tracks = TRACKS.filter((t) => t.available);
+  const i = tracks.findIndex((t) => t.id === preferences.track);
+  preferences.track = tracks[(i + direction + tracks.length) % tracks.length]!
+    .id as TrackId;
+  player.select(preferences.track);
+  void player.play();
+  persist();
+  updateMusic();
+}
 function updateMusic(): void {
   const track = TRACKS.find((t) => t.id === preferences.track)!;
   app.querySelector("#song-name")!.textContent = track.name;
@@ -225,20 +237,18 @@ function render(): void {
     const button = app.querySelector<HTMLButtonElement>(`#${id}-toggle`)!;
     button.setAttribute("aria-pressed", String(preferences[id]));
     app.querySelector(`#${id}-label`)!.textContent =
-      id === "lights"
-        ? lightLabel(preferences)
-        : preferences[id]
-          ? "ON"
-          : "OFF";
+      id === "lights" ? "조명" : preferences[id] ? "ON" : "OFF";
     if (id === "lights") {
-      button.setAttribute(
-        "aria-label",
-        `조명: ${lightLabel(preferences)}. 눌러 다음 패턴`,
-      );
+      button.setAttribute("aria-label", "조명");
+    }
+    if (id === "lights") {
+      button.title = `${lightLabel(preferences)} · 눌러 다음 패턴`;
+      button.dataset.pattern = preferences.lights
+        ? preferences.lightPattern
+        : "off";
     }
     if (id === "motion") button.disabled = !actors;
   }
-  app.querySelector<HTMLElement>("#preview-ribbon")!.hidden = !preview;
   updateMusic();
 }
 function cleanPhoto(): void {
@@ -250,6 +260,7 @@ function cleanPhoto(): void {
 }
 function closeSheet(): void {
   if (dialog.open) dialog.close();
+  app.classList.remove("sheet-open");
 }
 function openSheet(next: Sheet): void {
   const photoLocked = next === "photo" && !!preview;
@@ -263,6 +274,7 @@ function openSheet(next: Sheet): void {
       "aria-expanded",
       String((b as HTMLElement).dataset.action === next),
     );
+  app.classList.add("sheet-open");
   if (!dialog.open) dialog.showModal();
   if (photoLocked)
     app.querySelector("#sheet-feedback")!.textContent =
@@ -283,9 +295,9 @@ function renderSheet(): void {
   };
   app.querySelector("#sheet-title")!.textContent = sheet ? title[sheet] : "";
   if (sheet === "villages") {
-    content.innerHTML = `<p class="sheet-description">무료 마을 3곳은 언제든 머물 수 있어요. 특별 마을은 이용권 없이도 미리 볼 수 있어요.</p><div class="village-grid">${VILLAGES.map((v) => `<button class="village-card" data-village="${v.id}" aria-pressed="${display().village === v.id}"><span class="card-art card-${v.id}">${scene(v.id)}</span><span class="card-body"><span class="card-badge ${v.premium ? "premium" : ""}">${v.premium ? icon("star") : icon("check")}${cardLabel(v.premium)}</span><strong>${v.name}</strong><span>${v.subtitle}</span></span></button>`).join("")}</div><button class="wide-button gold" data-action="pass">${icon("star")}${unlocked() ? "내 7일 이용권 확인" : "특별 빌리지 3종 · 7일 이용권"}</button>`;
+    content.innerHTML = `<p class="sheet-description">무료 마을 3곳은 언제든 머물 수 있어요. 특별 마을은 이용권 없이도 미리 볼 수 있어요.</p><div class="village-grid">${VILLAGES.map((v) => `<button class="village-card" data-village="${v.id}" aria-pressed="${display().village === v.id}"><span class="card-art card-${v.id}">${scene(v.id, false)}</span><span class="card-body"><span class="card-badge ${v.premium ? "premium" : ""}">${v.premium ? icon("star") : icon("check")}${cardLabel(v.premium)}</span><strong>${v.name}</strong><span>${v.subtitle}</span></span></button>`).join("")}</div><button class="wide-button gold" data-action="pass">${icon("star")}${unlocked() ? "내 7일 이용권 확인" : "특별 빌리지 3종 · 7일 이용권"}</button>`;
   } else if (sheet === "music") {
-    content.innerHTML = `<p class="sheet-description">권리 근거를 기록한 무료 캐럴 4곡을 직접 합성해요. 4번 곡은 권리 확인 전까지 재생하지 않아요.<br>브라우저에서는 첫 재생에 터치가 필요할 수 있어요.</p><div class="tracks">${TRACKS.map((t, i) => `<button class="track-row" data-track="${t.id}" ${!t.available ? "disabled" : ""} aria-pressed="${preferences.track === t.id}"><span class="track-number">0${i + 1}</span><span><strong>${t.name}</strong><small>${t.mood} · ${t.bpm} BPM</small></span><span class="track-note">${icon("music")}</span></button>`).join("")}</div><div class="volume-control"><label for="volume">음량</label><input id="volume" type="range" min="0" max="1" step="0.05" value="${preferences.volume}"><output id="volume-value">${Math.round(preferences.volume * 100)}%</output><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button></div><p class="small-note">외부 녹음물을 사용하지 않는 자체 합성 연주예요. 악보의 Public Domain 표기와 출처는 프로젝트 음악 권리 문서에 기록했어요.</p>`;
+    content.innerHTML = `<p class="sheet-description">오래된 원선율을 바탕으로 직접 만든 오르골 캐럴 5곡이에요.<br>브라우저에서는 첫 재생에 터치가 필요할 수 있어요.</p><button class="text-button" data-action="repeat" aria-pressed="${preferences.repeat}">한 곡 반복 ${preferences.repeat ? "ON" : "OFF"}</button><div class="tracks">${TRACKS.map((t, i) => `<button class="track-row" data-track="${t.id}" ${!t.available ? "disabled" : ""} aria-pressed="${preferences.track === t.id}"><span class="track-number">0${i + 1}</span><span><strong>${t.name}</strong><small>${t.mood} · ${t.bpm} BPM</small></span><span class="track-note">${icon("music")}</span></button>`).join("")}</div><div class="volume-control"><label for="volume">음량</label><input id="volume" type="range" min="0" max="1" step="0.05" value="${preferences.volume}"><output id="volume-value">${Math.round(preferences.volume * 100)}%</output><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button></div><p class="small-note">외부 녹음물을 사용하지 않는 자체 합성 연주예요. 악보의 Public Domain 표기와 출처는 프로젝트 음악 권리 문서에 기록했어요.</p>`;
   } else if (sheet === "nights") {
     content.innerHTML = `<p class="sheet-description">마을에 다른 빛을 켜보세요. 움직임 줄이기를 켜면 고요한 정지 효과로 보여드려요.</p><button class="basic-night" data-effect="none">${icon("moon")}<span><strong>기본 밤</strong><small>늘 무료인 따뜻한 창문 불빛</small></span>${display().effect === null ? icon("check") : ""}</button><div class="night-list">${NIGHTS.map((n) => `<button class="night-card night-${n.id}" data-effect="${n.id}" aria-pressed="${display().effect === n.id}"><span class="night-swatch">${icon(n.symbol)}</span><span><strong>${n.name}</strong><small>${n.description}</small><em>${unlocked() ? "이용 가능" : "특별 · 미리보기"}</em></span>${icon(unlocked() ? "check" : "lock")}</button>`).join("")}</div><button class="wide-button gold" data-action="pass">${icon("star")}${unlocked() ? "내 이용권 확인" : "광고 시청으로 특별한 7일"}</button>`;
   } else if (sheet === "pass") {
@@ -514,22 +526,14 @@ app.addEventListener("click", (event) => {
       break;
     case "previous":
     case "next": {
-      const availableTracks = TRACKS.filter((t) => t.available);
-      const i = availableTracks.findIndex((t) => t.id === preferences.track);
-      preferences.track = availableTracks[
-        (i +
-          (target.dataset.action === "next" ? 1 : availableTracks.length - 1)) %
-          availableTracks.length
-      ]!.id as TrackId;
-      player.select(preferences.track);
-      void player.play();
-      persist();
-      updateMusic();
+      changeTrack(target.dataset.action === "next" ? 1 : -1);
       break;
     }
-    case "exit-preview":
-      preview = null;
-      render();
+    case "repeat":
+      preferences.repeat = !preferences.repeat;
+      player.setRepeat(preferences.repeat);
+      persist();
+      renderSheet();
       break;
     case "reward":
       void claimReward();
@@ -566,6 +570,7 @@ dialog.addEventListener("click", (event) => {
 });
 dialog.addEventListener("close", () => {
   if (dialog.open) return;
+  app.classList.remove("sheet-open");
   if (sheet === "photo") cleanPhoto();
   sheet = null;
   for (const b of app.querySelectorAll("[aria-expanded]"))

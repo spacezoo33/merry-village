@@ -1,5 +1,8 @@
 import { CHUFF_SECONDS, chuffOffset } from "./train-timing.ts";
 import { audioContext, audioStem } from "./audio-engine.ts";
+export function hornDelay(random = Math.random) {
+  return 20 + Math.max(0, Math.min(1, random())) * 30;
+}
 /** Seamless in-house loop + horns queued on the AUDIO clock, independent of rendering. */
 export class TrainSound {
   private context: AudioContext | null = null;
@@ -18,10 +21,11 @@ export class TrainSound {
   private scheduled = new Set<number>();
   private observed = new Set<number>();
   private history: number[] = [];
-  private cursor = 0;
+  private random: () => number;
   private update: (status: string) => void;
-  constructor(update: (status: string) => void) {
+  constructor(update: (status: string) => void, random = Math.random) {
     this.update = update;
+    this.random = random;
   }
   setRunning(running: boolean) {
     if (running === this.wanted) return;
@@ -51,7 +55,10 @@ export class TrainSound {
     return b;
   }
   syncJourney(seconds: number) {
-    if (!this.loop) {this.journey=seconds;this.offset = chuffOffset(seconds);}
+    if (!this.loop) {
+      this.journey = seconds;
+      this.offset = chuffOffset(seconds);
+    }
   }
   async unlock() {
     if (!this.wanted) return;
@@ -84,11 +91,12 @@ export class TrainSound {
           source.disconnect();
           filter.disconnect();
         };
-        const startAt=c.currentTime+Math.max(0,.65-this.journey);
+        const startAt = c.currentTime + Math.max(0, 0.65 - this.journey);
         source.start(startAt, this.offset);
         this.loop = source;
         this.loopStart = startAt;
-        if (!this.plan.length) this.plan.push(this.active + 27);
+        if (!this.plan.length)
+          this.plan.push(this.active + hornDelay(this.random));
         this.schedule();
         this.timer = setInterval(() => this.schedule(), 1000);
       }
@@ -99,7 +107,8 @@ export class TrainSound {
   }
   private get activeTime() {
     return (
-      this.active + (this.loop ? Math.max(0,this.context!.currentTime - this.loopStart) : 0)
+      this.active +
+      (this.loop ? Math.max(0, this.context!.currentTime - this.loopStart) : 0)
     );
   }
   private observe() {
@@ -109,19 +118,31 @@ export class TrainSound {
       if (at <= now && !this.observed.has(at)) {
         this.observed.add(at);
         this.history.push(at);
+        if (this.history.length > 100) this.history.shift();
       }
   }
   private schedule() {
     if (!this.context || !this.wanted) return;
     const now = this.activeTime;
     this.observe();
+    this.plan = this.plan.filter((t) => {
+      if (t <= now) {
+        this.scheduled.delete(t);
+        this.observed.delete(t);
+        return false;
+      }
+      return true;
+    });
+    if (!this.plan.length) this.plan.push(now + hornDelay(this.random));
     while (this.plan.at(-1)! < now + 70) {
-      const next = this.plan.at(-1)! + [29, 23, 34, 27][this.cursor++ % 4]!;
+      const next = this.plan.at(-1)! + hornDelay(this.random);
       this.plan.push(next);
     }
     for (const at of this.plan)
       if (at > now && !this.scheduled.has(at)) {
-        this.horn(Math.max(this.context.currentTime,this.loopStart) + at - now);
+        this.horn(
+          Math.max(this.context.currentTime, this.loopStart) + at - now,
+        );
         this.scheduled.add(at);
       }
   }
@@ -161,7 +182,7 @@ export class TrainSound {
     if (c) {
       this.observe();
       if (this.loop) {
-        const dt = Math.max(0,c.currentTime - this.loopStart);
+        const dt = Math.max(0, c.currentTime - this.loopStart);
         this.active += dt;
         this.journey += dt;
         this.offset = (this.offset + dt) % this.buffer!.duration;
@@ -176,6 +197,9 @@ export class TrainSound {
         }
       }
       this.scheduled.clear();
+      this.plan = [];
+      this.observed.clear();
+      this.voices.clear();
     }
     this.update("기차 소리 정지");
   }
@@ -186,13 +210,14 @@ export class TrainSound {
       running: !!this.loop && this.context?.state === "running",
       clock: now,
       puffs: Math.floor(
-        (this.active + (this.loop ? Math.max(0,now - this.loopStart) : 0)) / CHUFF_SECONDS,
+        (this.active + (this.loop ? Math.max(0, now - this.loopStart) : 0)) /
+          CHUFF_SECONDS,
       ),
       horns: this.history.length,
       hornTimes: this.history.slice(-12),
       untilHorn: Number(
         (
-          (this.plan.find((t) => t > this.activeTime) ?? this.activeTime + 27) -
+          (this.plan.find((t) => t > this.activeTime) ?? this.activeTime) -
           this.activeTime
         ).toFixed(2),
       ),

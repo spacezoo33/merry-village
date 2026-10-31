@@ -1,0 +1,18 @@
+We Wish You a Merry Christmas — traditional West Country carol melody
+
+The app's monophonic MIDI pitch/duration transcription is in src/catalog.ts
+(track id lullaby, G major, 112 BPM). The accompaniment and music-box synthesis
+are newly written for Merry Village. No lyrics, recording, piano score, choral
+parts, or modern commercial arrangement are included.
+
+The traditional melody must be distinguished from Arthur Warrell's 1935
+arrangement and modern recordings. Neither of those is used here.
+A separately inspected melody reference identifies the tune as traditional:
+https://github.com/robsoncouto/arduino-songs/blob/ae71b2e92c463bf93f320887b89f97374767efbb/merrychristmas/merrychristmas.ino
+Its source code has no explicit repository licence; its program and score were
+NOT copied or imported. It is a classification/cross-check reference only.
+The app transcription was written independently before reading that reference.
+
+The direct Hymnary source was blocked by this environment's network policy.
+This record does not claim that the blocked page or any historic printed score
+was examined, or that any modern arrangement/recording has been cleared.

@@ -50,7 +50,8 @@ export function adaptSnow(app: HTMLElement) {
     if (
       !document.hidden &&
       !media.matches &&
-      !app.classList.contains("snow-off")
+      !app.classList.contains("snow-off") &&
+      !app.classList.contains("sheet-open")
     )
       raf = requestAnimationFrame(tick);
   };

@@ -1,40 +1,42 @@
-# 최종 캐럴 목록과 기차 소리 권리
+# 음악 및 기차 소리의 출처
 
-외부 MP3·상업 녹음물·현대 편곡·가사·번역 가사는 사용하지 않는다.
-`src/catalog.ts`의 오래된 원선율을 직접 음높이/박자로 기록하고, `music.ts`에서 벨·글로켄슈필 배음,
-낮은 반주와 작은 종을 새로 합성한다. 동일한 선율의 5가지 변형이 아니라 아래 목록은 아래 5종이며 재생 가능한 곡은 4종이다. 4번은 권리 근거 확보 전까지 비활성화한다.
+외부 MP3·상업 녹음물·현대 합창/피아노 편곡·가사·번역 가사는 사용하지 않는다.
+앱은 원선율의 단선율 음높이/박자를 `src/catalog.ts`에 기록하고,
+`src/music-synth.ts`의 자체 오르골 악기와 독자적인 저음 반주로 연주한다.
+음악 밖에 별도로 얹던 작은 종 신호·버퍼·소스·버스는 제거했다.
+오르골 악기의 배음은 음악 자체의 음색으로 유지한다.
 
-| 앱 제목 | 원선율과 보호기간 근거 | 현재 연주 |
+| 앱 제목 | 사용하는 원선율 | 앱 연주 |
 |---|---|---|
-| 고요한 밤 | Franz Xaver Gruber, 1818. 1863 사망. Mutopia 공개 악보의 Public Domain 표기 확인 | 자체 채보/벨 합성, 76 BPM |
-| 징글벨 | James Lord Pierpont, 1857 《The One Horse Open Sleigh》. 1893 사망(2026년 기준 133년 경과) | 원선율을 자체 채보·반주·합성, 116 BPM |
-| 기쁘다 구주 오셨네 | ANTIOCH, Lowell Mason, 1836. 1872 사망. Mutopia 공개 악보 Public Domain 확인 | 자체 벨 합성, 104 BPM |
-| 축하해요 크리스마스 | 전통 선율로 분류된 자료는 확인했으나 상업 이용 가능한 특정 선율/편곡의 근거를 확보하지 못함 | **미완료·비활성**, 음표/녹음물 미포함 |
-| 오 크리스마스 트리 | 독일 전통 선율 / Ernst Anschütz의 1824 크리스마스 노래. 1861 사망 | 원선율을 자체 채보·반주·합성, 100 BPM |
+| 고요한 밤 | Franz Xaver Gruber, 1818; 작곡가 1863 사망. 보존한 Mutopia 원문 Public Domain 표기 | 자체 합성, 76 BPM |
+| 징글벨 | James Lord Pierpont, 1857; 작곡가 1893 사망. 기존 자체 원선율 채보 | 자체 합성, 116 BPM |
+| 기쁘다 구주 오셨네 | ANTIOCH, Lowell Mason, 1836; 작곡가 1872 사망. 보존한 Mutopia 원문 Public Domain 표기 | 자체 합성, 104 BPM |
+| 축하해요 크리스마스 | We Wish You a Merry Christmas의 전통 West Country 단선율. Warrell의 1935 합창 편곡과 구분 | 독립 채보·자체 반주·합성, 112 BPM |
+| 거룩한 밤 | Adolphe Adam, 1847; 작곡가 1856 사망. Mutopia의 Minuit Chrétiens 원문 Public Domain 표기 실제 확인 | 원선율의 장식음을 간소화한 자체 오르골 연주, 78 BPM |
 
-다음은 실제로 원문을 확인한 공개 악보와 이전 버전의 보존 기록이다. 현재 5번은 기존 `o-christmas-tree.txt`의 원곡·자체 채보를 재사용한다. 공개 악보는 MutopiaProject 커밋
-`2144afd6f52d56c5b6995b8b589ef1268b3139f0`의 다음 파일이며 [music-sources](music-sources/)에 출처·권리 표기를 그대로 보관한다.
+5번은 보존한 [o-holy-night.ly](music-sources/o-holy-night.ly)의 `melodie` 파트에 근거한다.
+출처는 MutopiaProject 커밋 `2144afd6f52d56c5b6995b8b589ef1268b3139f0`의
+[AdamA/minuit_chretiens/minuit_chretiens.ly](https://github.com/MutopiaProject/MutopiaProject/blob/2144afd6f52d56c5b6995b8b589ef1268b3139f0/ftp/AdamA/minuit_chretiens/minuit_chretiens.ly)이며,
+`source = "Ed. Léon Grus"`, `copyright = "Domaine public - Public Domain"`,
+`license = "Public Domain"`가 명시되어 있다. 현대 영어 가사·번역 가사 및 외부 반주/녹음은 쓰지 않는다.
 
-- [고요한 밤](https://github.com/MutopiaProject/MutopiaProject/blob/2144afd6f52d56c5b6995b8b589ef1268b3139f0/ftp/GruberFX/stille-orig/stille-orig.ly)
-- [ANTIOCH](https://github.com/MutopiaProject/MutopiaProject/blob/2144afd6f52d56c5b6995b8b589ef1268b3139f0/ftp/HandelGF/antioch/antioch.ly)
-- [MENDELSSOHN](https://github.com/MutopiaProject/MutopiaProject/blob/2144afd6f52d56c5b6995b8b589ef1268b3139f0/ftp/Mendelssohn-BartholdyF/mendelssohn/mendelssohn.ly)
+4번의 전통 선율 교차 확인 자료와 접근 한계는
+[we-wish-you-a-merry-christmas.txt](music-sources/we-wish-you-a-merry-christmas.txt)에 기록했다.
+참조 저장소의 프로그램은 이용 허락을 확인할 수 없어 복사하지 않았다.
+알려진 전통 단선율만 독립적으로 기록했고, 보호될 수 있는 1935년 합창 편곡은 사용하지 않는다.
+Hymnary 원문과 역사적 인쇄 악보의 추가 대조는 현재 네트워크 제한으로 미검증이다.
+이 기록은 모든 국가에서의 법률 검토나 현대 편곡·녹음물의 이용 허락을 뜻하지 않는다.
 
-징글벨과 오 크리스마스 트리는 위 원저작물의 오래된 선율을 자체 기록했다. 외부 현대 악보/편곡을 다운로드하지 않았다.
-징글벨의 역사적 발행 자료 참조는 [Library of Congress](https://www.loc.gov/item/sm1857.451080/)이다.
-이 링크는 역사적 자료 참고이며 이번 세션에서 해당 스캔의 네트워크 열람을 검증했다고 주장하지 않는다.
-원곡의 보호기간 만료는 같은 제목의 현대 녹음물/편곡을 사용할 권리가 있다는 뜻이 아니다. 이 앱은 그런 녹음물을 쓰지 않는다.
-이전 버전의 공개 악보도 삭제하지 않고 기록으로 보존했다. 현재 목록에서 천사 찬송하기를는 제외했다. 4번의 권리 확인 과정과 접근 한계는 [최종 개선 기록](final-polish.md)에 명시했다.
+기존 공개 악보 보존 기록도 삭제하지 않는다. 고요한 밤과 ANTIOCH의 원문은 같은 Mutopia 커밋의
+`ftp/GruberFX/stille-orig/stille-orig.ly`, `ftp/HandelGF/antioch/antioch.ly`이다.
+징글벨의 역사적 발행 자료 참고: <https://www.loc.gov/item/sm1857.451080/>.
+이 링크의 스캔을 이번 세션에서 열람했다고 주장하지 않는다.
 
-자체 합성 연주를 사용하므로 제3자 녹음물·실연자의 사용 허락에 의존하지 않는다.
-곡별 실제 음표/박자 합으로 재생 길이를 계산하며, 음원 버퍼를 같은 최대 진폭으로 정규화하고
-짧은 어택/릴리스로 전환 잡음을 줄인다. 최대 2개의 모노 22.05kHz 버퍼를 캐시한다.
+음악은 22.05kHz 모노 Float32 PCM으로 새로 합성하고 최대 진폭 .36으로 정규화한다.
+2개 곡까지 캐시하고 재생·일시정지·이전/다음·한 곡 반복·곡 끝 자동 다음 곡을 지원한다.
+별도 종소리 stem이나 종소리 예약 타이머는 없다.
 
-`audio-engine.ts`의 독립 음악/종/기차/경적 버스와 헤드룸 리미터를 사용한다. `music-synth.ts`의 종소리는 별도 합성 신호이며 모든 재생 가능한 곡에 박자 동기화해 제공한다.
-
-`train-sound.ts`의 기차 주행음은 직접 만든 노이즈 + 필터 + 완만한 엔벌로프이고,
-경적은 자체 사인파 3음 합성이다. 녹음 샘플이나 외부 효과음 라이브러리가 없다.
-주행 중에만 연속적인 작은 증기음과 18초당 64펄스 주기의 칙칙 소리를 내며,
-첫 경적은 27초 뒤, 이후 29/23/34/27초 간격이다. 정지/백그라운드에서 스케줄과 소리를 끊고
-재개 시 남은 경적 대기 시간을 이어간다. 브라우저가 소리를 차단하면 첫 터치로 다시 시도한다.
-
-기차 경적의 대기 시간은 음악/브라우저 장치 시간이 아니라 실제 운행 시간으로 계산한다. 동작을 끈 동안 음악이 계속 재생되어도 경적 대기 시간이 흐르거나 보상 없이 경적이 재생된 것으로 기록되지 않는다. 주행음 루프와 경적은 렌더링 타이머와 독립적으로 오디오 엔진에서 재생한다.
+`audio-engine.ts`의 음악/기차/기적 독립 버스와 최종 헤드룸 리미터를 사용한다.
+기차 칙칙 소리는 자체 노이즈·필터·엔벌로프, 기적은 자체 사인파 3음 합성이다.
+기차 주행음 볼륨과 18초당 64펄스는 유지한다. 기적은 매번 20~50초의 새로운 난수를 뽑으며,
+정지·백그라운드 진입 시 예약 음원과 스케줄을 취소하고, 운행 재개 시 새 간격으로 시작한다.

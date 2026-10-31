@@ -1,6 +1,6 @@
 import type { TRACKS } from "./catalog.ts";
 export type Score = (typeof TRACKS)[number];
-/** Newly synthesised independent stems; no third-party recording or modern arrangement. */
+/** Newly synthesised music; no third-party recording or modern arrangement. */
 export function synthMusic(score: Score, rate = 22050) {
   if (!score.available || !score.score)
     throw new Error("음원 권리 확인 전에는 합성하지 않습니다.");
@@ -10,9 +10,8 @@ export function synthMusic(score: Score, rate = 22050) {
       .reduce((sum, token) => sum + Number(token.split(":")[1]), 0) *
       60) /
     score.bpm;
-  const data = new Float32Array(Math.ceil(duration * rate)),
-    bells = new Float32Array(data.length);
-  // Fresh stereo-like bell overtones, low accompaniment and sparse small chimes.
+  const data = new Float32Array(Math.ceil(duration * rate));
+  // Music-box overtones and an original soft accompaniment; no extra chime layer.
   // Every voice has an attack/release; peak normalisation prevents track-to-track jumps.
   const add = (
     midi: number,
@@ -58,11 +57,6 @@ export function synthMusic(score: Score, rate = 22050) {
       const note = [root + 4, root + 7][(step - 1) % 2]!;
       add(note, base + step * beat, beat, 0.023, "soft");
     }
-    if (base < duration) {
-      add(root + 24, base, 0.65, 0.13, "bell", bells);
-      if (bar % 2 === 0 && base + beat * 1.5 < duration)
-        add(root + 31, base + beat * 1.5, 0.55, 0.085, "bell", bells);
-    }
   }
   let peak = 0;
   for (const v of data) peak = Math.max(peak, Math.abs(v));
@@ -76,13 +70,5 @@ export function synthMusic(score: Score, rate = 22050) {
     data[i]! *= normalise * fade;
   }
 
-  for (let i = 0; i < bells.length; i++) {
-    const fade = Math.min(
-      1,
-      i / (rate * 0.012),
-      (bells.length - i) / (rate * 0.08),
-    );
-    bells[i]! *= fade;
-  }
-  return { music: data, bells, duration, rate };
+  return { music: data, duration, rate };
 }

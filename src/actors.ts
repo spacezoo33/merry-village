@@ -1,3 +1,4 @@
+import { tunnelPortals } from "./tunnel";
 import { contactShadow, snowMaterial } from "./surface";
 import { batchStatic } from "./model-batch";
 import * as T from "three";
@@ -68,11 +69,14 @@ export class Actors {
   private cars: T.Group[] = [];
   private wheels: T.Group[] = [];
   private calibration;
+  private village: VillageId;
   private environment: T.WebGLRenderTarget;
   ready: Promise<void> = Promise.resolve();
   private dead = false;
   private links: T.Mesh[] = [];
   private architecture: HTMLElement[] = [];
+  private starGlow: T.Sprite | null = null;
+  private starLight: T.PointLight | null = null;
   private glowMaterial: T.ShaderMaterial | null = null;
   private diodeBodies: T.InstancedMesh | null = null;
   private diodeColors: T.Color[] = [];
@@ -98,10 +102,11 @@ export class Actors {
   private textures: T.Texture[] = [];
   private host: HTMLElement;
   constructor(host: HTMLElement, village: VillageId) {
+    this.village = village;
     this.calibration = railCalibration(village);
     this.host = host;
     this.architecture = [
-      ...host.parentElement!.querySelectorAll<HTMLElement>(".bulb-emitter"),
+      ...host.parentElement!.querySelectorAll<HTMLElement>(".decor-bulb"),
     ];
     this.renderer = new T.WebGLRenderer({
       alpha: true,
@@ -339,6 +344,31 @@ export class Actors {
       material: star.material as T.MeshStandardMaterial,
       phase: 0,
     });
+    const glowCanvas = document.createElement("canvas");
+    glowCanvas.width = glowCanvas.height = 64;
+    const c = glowCanvas.getContext("2d")!;
+    const halo = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+    halo.addColorStop(0, "#fff2bbcc");
+    halo.addColorStop(0.25, "#ffc45c55");
+    halo.addColorStop(1, "#ffb53c00");
+    c.fillStyle = halo;
+    c.fillRect(0, 0, 64, 64);
+    const map = new T.CanvasTexture(glowCanvas);
+    this.textures.push(map);
+    this.starGlow = new T.Sprite(
+      new T.SpriteMaterial({
+        map,
+        transparent: true,
+        blending: T.AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
+    this.starGlow.position.copy(star.position);
+    this.starGlow.scale.set(0.37, 0.37, 1);
+    tree.add(this.starGlow);
+    this.starLight = new T.PointLight(0xffc56e, 0.4, 0.8, 2);
+    this.starLight.position.copy(star.position);
+    tree.add(this.starLight);
     batchStatic(tree, new Set([star]));
   }
   private buildTrain() {
@@ -356,14 +386,71 @@ export class Actors {
     // progressively across each vehicle (not whole-car visibility popping).
     const tunnel = new T.Plane(
       new T.Vector3(0, 0, 1),
-      -this.calibration.tunnelZ,
+      -(this.calibration.tunnelZ - 0.18),
     );
     for (const car of [...this.cars, ...this.links])
       car.traverse((o) => {
         if (o instanceof T.Mesh || o instanceof T.Points) {
           const original = o.material as T.MeshStandardMaterial;
           const m = original.clone();
-          m.onBeforeCompile = original.onBeforeCompile;
+          const portals = tunnelPortals(this.village);
+          m.onBeforeCompile = (shader, renderer) => {
+            original.onBeforeCompile(shader, renderer);
+            shader.uniforms.portalLeft = {
+              value: new T.Vector4(
+                portals[0]!.x,
+                portals[0]!.y,
+                portals[0]!.rx,
+                portals[0]!.ry,
+              ),
+            };
+            shader.uniforms.portalRight = {
+              value: new T.Vector4(
+                portals[1]!.x,
+                portals[1]!.y,
+                portals[1]!.rx,
+                portals[1]!.ry,
+              ),
+            };
+            shader.uniforms.portalHeight = { value: this.calibration.height };
+            shader.uniforms.portalDepth = { value: this.calibration.tunnelZ };
+            shader.vertexShader =
+              "varying vec3 tunnelWorld; varying vec2 tunnelPixel;\n" +
+              shader.vertexShader;
+            shader.vertexShader = shader.vertexShader.replace(
+              "#include <project_vertex>",
+              `#include <project_vertex>
+              tunnelWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
+              tunnelPixel = gl_Position.xy / gl_Position.w * .5 + .5;
+            `,
+            );
+            shader.fragmentShader =
+              `varying vec3 tunnelWorld; varying vec2 tunnelPixel;
+              uniform vec4 portalLeft; uniform vec4 portalRight;
+              uniform float portalHeight; uniform float portalDepth;
+              bool openMouth(vec2 pixel, vec4 p) {
+                vec2 d = (pixel-p.xy)/p.zw;
+                return pixel.y <= p.y+21. && abs(d.x)<=1. && (d.y>=0. || dot(d,d)<=1.);
+              }
+            ` + shader.fragmentShader;
+            shader.fragmentShader = shader.fragmentShader.replace(
+              "#include <clipping_planes_fragment>",
+              `#include <clipping_planes_fragment>
+              vec2 atlasPixel = vec2(tunnelPixel.x*512., (1.-tunnelPixel.y)*portalHeight);
+              if (tunnelWorld.z < portalDepth + .12 && !openMouth(atlasPixel,portalLeft) && !openMouth(atlasPixel,portalRight)) discard;
+            `,
+            );
+            shader.fragmentShader = shader.fragmentShader.replace(
+              "#include <opaque_fragment>",
+              `
+              // Darken only the portion physically inside the recess; no whole-car fade.
+              outgoingLight *= mix(.38, 1., smoothstep(portalDepth-.18,portalDepth+.08,tunnelWorld.z));
+              #include <opaque_fragment>
+            `,
+            );
+          };
+          m.customProgramCacheKey = () =>
+            original.customProgramCacheKey() + "|merry-tunnel-aperture-v1";
           m.clippingPlanes = [tunnel];
           o.material = m;
         }
@@ -473,6 +560,7 @@ export class Actors {
             this.lightTime,
             i,
             this.reduced.matches,
+            0,
           ) * (this.settings.gold ? 3.3 : 2.5)
         : 0;
     this.ledAttribute.needsUpdate = true;
@@ -491,6 +579,14 @@ export class Actors {
           ? this.ledWeights[0]!
           : 0),
     );
+    if (this.starGlow)
+      this.starGlow.material.opacity = this.settings.lights
+        ? Math.min(0.85, this.ledWeights[0]! * 0.32)
+        : 0;
+    if (this.starLight)
+      this.starLight.intensity = this.settings.lights
+        ? this.ledWeights[0]! * 0.3
+        : 0;
     for (const [i, bulb] of this.architecture.entries()) {
       const level = this.settings.lights
         ? lightLevel(
@@ -498,9 +594,11 @@ export class Actors {
             this.lightTime,
             i,
             this.reduced.matches,
+            Number(bulb.dataset.lightGroup ?? 1),
           )
         : 0;
-      bulb.style.opacity = String(level);
+      bulb.querySelector<HTMLElement>(".bulb-emitter")!.style.opacity =
+        String(level);
       bulb.style.setProperty("--intensity", String(level));
     }
     this.renderer.render(this.world, this.camera);

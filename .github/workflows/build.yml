@@ -44,7 +44,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Prepare Pages artifact from the development branch
-        if: vars.ENABLE_PAGES == 'true' && github.ref == 'refs/heads/feat/elliptical-train-ride' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/feat/elliptical-train-ride' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist/
@@ -56,7 +56,7 @@ jobs:
 
   pages:
     needs: build
-    if: vars.ENABLE_PAGES == 'true' && github.ref == 'refs/heads/feat/elliptical-train-ride' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/feat/elliptical-train-ride' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

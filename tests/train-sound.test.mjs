@@ -29,6 +29,27 @@ class FakeContext {
   createGain() {
     return { gain: parameter(), connect() {}, disconnect() {} };
   }
+  createDynamicsCompressor() {
+    return {
+      threshold: parameter(),
+      knee: parameter(),
+      ratio: parameter(),
+      attack: parameter(),
+      release: parameter(),
+      connect() {},
+      disconnect() {},
+    };
+  }
+  createAnalyser() {
+    return {
+      fftSize: 2048,
+      connect() {},
+      disconnect() {},
+      getFloatTimeDomainData(data) {
+        data.fill(0);
+      },
+    };
+  }
   createBiquadFilter() {
     return { frequency: parameter(), connect() {}, disconnect() {} };
   }
@@ -72,7 +93,7 @@ test("train pause freezes its own horn clock while the shared music/device clock
     await wait();
     const c = audioContext();
     assert.equal(sound.diagnostics.running, true);
-    c.currentTime = 27.1;
+    c.currentTime = 27.75;
     assert.equal(sound.diagnostics.horns, 1);
     sound.setRunning(false);
     const paused = sound.diagnostics;
@@ -85,10 +106,10 @@ test("train pause freezes its own horn clock while the shared music/device clock
     await wait();
     const starts = c.oscillators.slice(previous).map((n) => n.startAt);
     assert.ok(starts.length >= 3);
-    assert.ok(Math.abs(starts[0] - 156) < 1e-8);
-    c.currentTime = 155.9;
+    assert.ok(Math.abs(starts[0] - 156.65) < 1e-8);
+    c.currentTime = 156.55;
     assert.equal(sound.diagnostics.horns, 1);
-    c.currentTime = 156.1;
+    c.currentTime = 156.75;
     assert.equal(sound.diagnostics.horns, 2);
     assert.equal(c.state, "running");
     sound.setRunning(false);

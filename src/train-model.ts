@@ -1,3 +1,4 @@
+import { contactShadow, snowMaterial } from "./surface";
 import * as T from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
@@ -16,7 +17,7 @@ export function buildVintageCar(engine: boolean): TrainModel {
     green = material(0x144336, 0.5, 0.34),
     red = material(0x8e211a, 0.4, 0.4),
     black = material(0x201b16, 0.45, 0.5),
-    snow = material(0xf8eddb, 0, 0.95),
+    snow = snowMaterial(),
     coal = material(0x121412, 0, 0.98);
   const glass = new T.MeshStandardMaterial({
     color: 0xffd181,
@@ -327,5 +328,8 @@ export function buildVintageCar(engine: boolean): TrainModel {
       brass,
       body,
     );
+  const shadow = contactShadow(engine ? 0.38 : 0.33, 0.19, 0.3);
+  shadow.position.y = -0.009;
+  group.add(shadow);
   return { group, wheels, materials: mats };
 }

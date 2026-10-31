@@ -104,10 +104,3 @@ export function projectRail(id: VillageId, angle: number) {
       p.height,
   };
 }
-export function architecturalPoints(id: VillageId) {
-  const shift = RAIL_PROFILES[id].height === 505 ? -8 : 0;
-  return [12, 20, 29, 38, 66, 76, 85, 91, 22, 78, 33, 62].map((x, i) => ({
-    x,
-    y: [42, 46, 40, 45, 43, 45, 47, 42, 68, 69, 57, 58][i]! + shift,
-  }));
-}

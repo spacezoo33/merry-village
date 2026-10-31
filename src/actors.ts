@@ -1,3 +1,4 @@
+import { contactShadow, snowMaterial } from "./surface";
 import { batchStatic } from "./model-batch";
 import * as T from "three";
 import { addFirBranches } from "./fir";
@@ -31,7 +32,7 @@ const red = new T.MeshStandardMaterial({
   roughness: 0.42,
 });
 const green = new T.MeshStandardMaterial({ color: 0x123f2d, roughness: 0.65 });
-const snow = new T.MeshStandardMaterial({ color: 0xfff6e6, roughness: 0.95 });
+const snow = snowMaterial();
 const shared = [bronze, dark, red, green, snow];
 function mesh(
   g: T.BufferGeometry,
@@ -71,6 +72,10 @@ export class Actors {
   ready: Promise<void> = Promise.resolve();
   private dead = false;
   private links: T.Mesh[] = [];
+  private architecture: HTMLElement[] = [];
+  private glowMaterial: T.ShaderMaterial | null = null;
+  private diodeBodies: T.InstancedMesh | null = null;
+  private diodeColors: T.Color[] = [];
   private ledWeights = new Float32Array(75);
   private ledAttribute = new T.BufferAttribute(this.ledWeights, 1);
   private bulbs: { material: T.MeshStandardMaterial; phase: number }[] = [];
@@ -95,6 +100,9 @@ export class Actors {
   constructor(host: HTMLElement, village: VillageId) {
     this.calibration = railCalibration(village);
     this.host = host;
+    this.architecture = [
+      ...host.parentElement!.querySelectorAll<HTMLElement>(".bulb-emitter"),
+    ];
     this.renderer = new T.WebGLRenderer({
       alpha: true,
       antialias: true,
@@ -169,7 +177,16 @@ export class Actors {
     const tree = this.tree;
     tree.position.set(0, this.calibration.treeY, 0);
     this.world.add(tree);
-    mesh(new T.CylinderGeometry(0.045, 0.06, 0.18, 12), bronze, tree, 0, 0.04);
+    const shadow = contactShadow(0.66, 0.38, 0.28);
+    shadow.position.set(0.025, this.calibration.treeY - 0.049, 0.02);
+    this.world.add(shadow);
+    mesh(
+      new T.CylinderGeometry(0.045, 0.06, 0.18, 12),
+      new T.MeshStandardMaterial({ color: 0x685036, roughness: 0.9 }),
+      tree,
+      0,
+      0.04,
+    );
     const fir = addFirBranches(tree);
     this.textures.push(fir.texture);
     this.ready = fir.ready
@@ -247,7 +264,7 @@ export class Actors {
     );
     const leds = new T.InstancedMesh(
       new T.SphereGeometry(0.012, 7, 5),
-      new T.MeshStandardMaterial({ roughness: 0.3 }),
+      new T.MeshStandardMaterial({ roughness: 0.5 }),
       75,
     );
     const ledPositions = new Float32Array(225),
@@ -262,9 +279,11 @@ export class Actors {
       leds.setMatrixAt(i, dummy.matrix);
       const color = new T.Color([0xffb63e, 0xc42e18, 0x51a447][i % 3]);
       leds.setColorAt(i, color);
+      this.diodeColors.push(color.clone());
       dummy.position.toArray(ledPositions, i * 3);
       color.toArray(ledColors, i * 3);
     }
+    this.diodeBodies = leds;
     tree.add(leds);
     const geometry = new T.BufferGeometry();
     geometry.setAttribute("position", new T.BufferAttribute(ledPositions, 3));
@@ -276,13 +295,14 @@ export class Actors {
         transparent: true,
         depthWrite: false,
         blending: T.AdditiveBlending,
-        uniforms: { size: { value: 5 * Math.min(devicePixelRatio, 1.75) } },
+        uniforms: { size: { value: 9 * Math.min(devicePixelRatio, 1.75) } },
         vertexShader:
           "attribute vec3 tint; attribute float level; varying vec3 vTint; varying float vLevel; uniform float size; void main(){ vTint=tint;vLevel=level;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);gl_PointSize=size; }",
         fragmentShader:
           "varying vec3 vTint;varying float vLevel;void main(){float r=length(gl_PointCoord-vec2(.5))*2.;float a=pow(max(0.,1.-r),2.);gl_FragColor=vec4(vTint*vLevel,a*min(1.,vLevel));}",
       }),
     );
+    this.glowMaterial = points.material;
     tree.add(points);
     const shape = new T.Shape();
     for (let i = 0; i < 10; i++) {
@@ -343,6 +363,7 @@ export class Actors {
         if (o instanceof T.Mesh || o instanceof T.Points) {
           const original = o.material as T.MeshStandardMaterial;
           const m = original.clone();
+          m.onBeforeCompile = original.onBeforeCompile;
           m.clippingPlanes = [tunnel];
           o.material = m;
         }
@@ -455,17 +476,22 @@ export class Actors {
           ) * (this.settings.gold ? 3.3 : 2.5)
         : 0;
     this.ledAttribute.needsUpdate = true;
+    if (this.diodeBodies) {
+      for (let i = 0; i < 75; i++) {
+        const color = this.diodeColors[i]!.clone().multiplyScalar(
+          0.06 + 0.8 * Math.min(1, this.ledWeights[i]! / 2.5),
+        );
+        this.diodeBodies.setColorAt(i, color);
+      }
+      this.diodeBodies.instanceColor!.needsUpdate = true;
+    }
     this.bulbs.forEach(
       (b) =>
         (b.material.emissiveIntensity = this.settings.lights
           ? this.ledWeights[0]!
           : 0),
     );
-    for (const [i, bulb] of [
-      ...this.host.parentElement!.querySelectorAll<HTMLElement>(
-        ".architectural-lights i",
-      ),
-    ].entries()) {
+    for (const [i, bulb] of this.architecture.entries()) {
       const level = this.settings.lights
         ? lightLevel(
             this.settings.pattern,
@@ -493,12 +519,28 @@ export class Actors {
     return this.lightTime;
   }
   snapshot(): HTMLCanvasElement {
-    this.draw();
-    const copy = document.createElement("canvas");
-    copy.width = this.renderer.domElement.width;
-    copy.height = this.renderer.domElement.height;
-    copy.getContext("2d")!.drawImage(this.renderer.domElement, 0, 0);
-    return copy;
+    // Render the frozen current pose at export resolution, not an enlarged phone framebuffer.
+    const size = this.renderer.getSize(new T.Vector2()),
+      ratio = this.renderer.getPixelRatio();
+    const pointSize = this.glowMaterial?.uniforms.size!.value;
+    try {
+      this.renderer.setPixelRatio(1);
+      this.renderer.setSize(1200, 1200, false);
+      if (this.glowMaterial)
+        this.glowMaterial.uniforms.size!.value =
+          (9 * 1200) / Math.max(1, this.host.clientWidth);
+      this.draw();
+      const copy = document.createElement("canvas");
+      copy.width = 1200;
+      copy.height = 1200;
+      copy.getContext("2d")!.drawImage(this.renderer.domElement, 0, 0);
+      return copy;
+    } finally {
+      this.renderer.setPixelRatio(ratio);
+      this.renderer.setSize(size.x, size.y, false);
+      if (this.glowMaterial) this.glowMaterial.uniforms.size!.value = pointSize;
+      this.draw();
+    }
   }
   destroy() {
     this.dead = true;

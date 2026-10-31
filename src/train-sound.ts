@@ -1,4 +1,5 @@
-import { audioContext } from "./audio-engine.ts";
+import { CHUFF_SECONDS, chuffOffset } from "./train-timing.ts";
+import { audioContext, audioStem } from "./audio-engine.ts";
 /** Seamless in-house loop + horns queued on the AUDIO clock, independent of rendering. */
 export class TrainSound {
   private context: AudioContext | null = null;
@@ -8,6 +9,7 @@ export class TrainSound {
   private loopStart = 0;
   private offset = 0;
   private active = 0;
+  private journey = 0;
   private voices = new Set<AudioScheduledSourceNode>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private wanted = false;
@@ -29,7 +31,7 @@ export class TrainSound {
   }
   private makeBuffer(c: AudioContext) {
     const rate = 22050,
-      b = c.createBuffer(1, Math.round(rate * 1.16), rate),
+      b = c.createBuffer(1, Math.round(rate * CHUFF_SECONDS * 4), rate),
       data = b.getChannelData(0);
     let seed = 12345,
       last = 0;
@@ -37,9 +39,9 @@ export class TrainSound {
       seed = (seed * 16807) % 2147483647;
       const white = (seed / 2147483647) * 2 - 1;
       last = 0.62 * last + 0.38 * white;
-      const phase = (i / rate) % 0.29,
+      const phase = (i / rate) % CHUFF_SECONDS,
         envelope = Math.min(1, phase / 0.024) * Math.exp(-phase * 18);
-      data[i] = last * (0.038 * envelope + 0.0028);
+      data[i] = last * (0.2 * envelope + 0.009);
     }
     for (let i = 0; i < 128; i++) {
       const f = i / 128;
@@ -48,6 +50,9 @@ export class TrainSound {
     }
     return b;
   }
+  syncJourney(seconds: number) {
+    if (!this.loop) {this.journey=seconds;this.offset = chuffOffset(seconds);}
+  }
   async unlock() {
     if (!this.wanted) return;
     const generation = ++this.generation;
@@ -55,8 +60,8 @@ export class TrainSound {
       if (!this.context) {
         const c = (this.context = audioContext());
         this.output = c.createGain();
-        this.output.gain.value = 0.55;
-        this.output.connect(c.destination);
+        this.output.gain.value = 0.75;
+        this.output.connect(audioStem("train"));
         this.buffer = this.makeBuffer(c);
       }
       const c = this.context;
@@ -79,9 +84,10 @@ export class TrainSound {
           source.disconnect();
           filter.disconnect();
         };
-        source.start(0, this.offset);
+        const startAt=c.currentTime+Math.max(0,.65-this.journey);
+        source.start(startAt, this.offset);
         this.loop = source;
-        this.loopStart = c.currentTime;
+        this.loopStart = startAt;
         if (!this.plan.length) this.plan.push(this.active + 27);
         this.schedule();
         this.timer = setInterval(() => this.schedule(), 1000);
@@ -93,7 +99,7 @@ export class TrainSound {
   }
   private get activeTime() {
     return (
-      this.active + (this.loop ? this.context!.currentTime - this.loopStart : 0)
+      this.active + (this.loop ? Math.max(0,this.context!.currentTime - this.loopStart) : 0)
     );
   }
   private observe() {
@@ -115,16 +121,16 @@ export class TrainSound {
     }
     for (const at of this.plan)
       if (at > now && !this.scheduled.has(at)) {
-        this.horn(this.context.currentTime + at - now);
+        this.horn(Math.max(this.context.currentTime,this.loopStart) + at - now);
         this.scheduled.add(at);
       }
   }
   private horn(at: number) {
     const c = this.context!;
     for (const [hz, level] of [
-      [440, 0.021],
-      [554.37, 0.012],
-      [659.25, 0.008],
+      [440, 0.021 * 0.55],
+      [554.37, 0.012 * 0.55],
+      [659.25, 0.008 * 0.55],
     ]) {
       const source = c.createOscillator(),
         e = c.createGain();
@@ -136,7 +142,7 @@ export class TrainSound {
       e.gain.setValueAtTime(level!, at + 0.65);
       e.gain.exponentialRampToValueAtTime(0.0001, at + 1.25);
       source.connect(e);
-      e.connect(this.output!);
+      e.connect(audioStem("horn"));
       source.start(at);
       source.stop(at + 1.3);
       this.voices.add(source);
@@ -155,8 +161,9 @@ export class TrainSound {
     if (c) {
       this.observe();
       if (this.loop) {
-        const dt = c.currentTime - this.loopStart;
+        const dt = Math.max(0,c.currentTime - this.loopStart);
         this.active += dt;
+        this.journey += dt;
         this.offset = (this.offset + dt) % this.buffer!.duration;
         this.loop.stop();
         this.loop = null;
@@ -179,7 +186,7 @@ export class TrainSound {
       running: !!this.loop && this.context?.state === "running",
       clock: now,
       puffs: Math.floor(
-        (this.active + (this.loop ? now - this.loopStart : 0)) / 0.29,
+        (this.active + (this.loop ? Math.max(0,now - this.loopStart) : 0)) / CHUFF_SECONDS,
       ),
       horns: this.history.length,
       hornTimes: this.history.slice(-12),

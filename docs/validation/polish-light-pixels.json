@@ -1,0 +1,26 @@
+[
+  {
+    "name": "tree",
+    "meanDifference": 3.1584659090909093,
+    "pixelsChangedMoreThan20": 939,
+    "maxDifference": 129.33333333333334
+  },
+  {
+    "name": "building_garland",
+    "meanDifference": 5.108261437908497,
+    "pixelsChangedMoreThan20": 1265,
+    "maxDifference": 177.0
+  },
+  {
+    "name": "room_background",
+    "meanDifference": 0.0,
+    "pixelsChangedMoreThan20": 0,
+    "maxDifference": 0.0
+  },
+  {
+    "name": "wood_base",
+    "meanDifference": 0.0,
+    "pixelsChangedMoreThan20": 0,
+    "maxDifference": 0.0
+  }
+]

@@ -1778,60 +1778,7 @@ h1 span {
   transition: none;
   filter: brightness(calc(0.5 + var(--intensity, 1) * 0.8));
 }
-.lighting-sheet {
-  inset: max(70px, env(safe-area-inset-top)) 12px auto auto;
-  width: min(340px, calc(100% - 24px));
-  max-height: 80svh;
-  border-radius: 23px;
-}
-.lighting-sheet .sheet-shell {
-  padding: 14px 18px 20px;
-}
-.lighting-sheet .sheet-header h2 {
-  font-size: 21px;
-}
-.light-power,
-.lighting-patterns button {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  min-height: 56px;
-  border: 1px solid #dbc6a6;
-  border-radius: 14px;
-  background: #f4e8d4;
-  color: #65452c;
-  padding: 12px;
-  margin-bottom: 8px;
-  text-align: left;
-}
-.light-power {
-  background: #765331;
-  color: #fff0d6;
-  border-color: #b39360;
-}
-.light-power span:first-of-type {
-  flex: 1;
-}
-.lighting-patterns {
-  margin-top: 14px;
-}
-.lighting-patterns strong,
-.lighting-patterns small {
-  display: block;
-}
-.lighting-patterns small {
-  font-size: 10px;
-  line-height: 1.5;
-  margin-top: 4px;
-  color: #84684b;
-}
-.lighting-patterns button[aria-pressed="true"] {
-  border-color: #a67b39;
-  box-shadow: inset 0 0 0 1px #be9654;
-  background: #f9e8bf;
-}
+
 @media (prefers-reduced-motion: reduce) {
   .snowfall i,
   .snowfall i:nth-child(3n) {
@@ -1840,4 +1787,79 @@ h1 span {
     opacity: 0.7;
     translate: 0 0;
   }
+}
+/* One-touch lighting cycle; no lighting popup. */
+#lights-toggle {
+  border-radius: 18px;
+  min-height: 62px;
+  height: auto;
+  padding: 7px 2px;
+}
+#lights-toggle > span {
+  font-size: 0;
+}
+#lights-label {
+  display: block;
+  font-size: 8px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: normal;
+  max-width: 52px;
+}
+.snow-front {
+  opacity: 0.72;
+  filter: blur(0.25px);
+}
+.snow-back {
+  opacity: 0.5;
+  filter: blur(1px);
+}
+.snow-mid {
+  opacity: 0.75;
+}
+#app[data-snow-quality="medium"] .snow-back i:nth-child(n + 19),
+#app[data-snow-quality="medium"] .snow-mid i:nth-child(n + 23),
+#app[data-snow-quality="medium"] .snow-front i:nth-child(n + 17),
+#app[data-snow-quality="low"] .snow-back i:nth-child(n + 15),
+#app[data-snow-quality="low"] .snow-mid i:nth-child(n + 19),
+#app[data-snow-quality="low"] .snow-front i:nth-child(n + 13) {
+  display: none;
+}
+/* Separate controllable bulbs sit on architectural garlands/eaves, not window panes. */
+.architectural-lights .decor-bulb {
+  position: absolute;
+  width: 0.5%;
+  height: 0.5%;
+  margin: -0.25%;
+  background: none;
+  box-shadow: none;
+  filter: none;
+  opacity: 1 !important;
+  border-radius: 50%;
+}
+.decor-bulb:before {
+  content: "";
+  position: absolute;
+  inset: 22%;
+  background: #27351e;
+  border-radius: 50%;
+}
+.decor-bulb .bulb-emitter {
+  position: absolute;
+  inset: 5%;
+  background: var(--bulb-color);
+  border-radius: 50%;
+  box-shadow: 0 0 4px 1px var(--bulb-color);
+  will-change: opacity;
+}
+.lights-off .architectural-lights {
+  display: block;
+}
+#app[data-effect="wishes"] .architectural-lights .decor-bulb {
+  width: 0.5%;
+  height: 0.5%;
+  box-shadow: none;
+}
+#app[data-effect="wishes"] .bulb-emitter {
+  box-shadow: 0 0 8px 2px var(--bulb-color);
 }

@@ -1,3 +1,4 @@
+import { snowMaterial } from "./surface";
 import * as T from "three";
 import firUrl from "./assets/fir-sprig.png";
 /** Crossed needle cards are distributed in real 3D space, not a rotating tree photograph. */
@@ -29,7 +30,7 @@ export function addFirBranches(tree: T.Group) {
     );
   const patches = new T.InstancedMesh(
     new T.SphereGeometry(1, 7, 5),
-    new T.MeshStandardMaterial({ color: 0xfff4dd, roughness: 1 }),
+    snowMaterial(),
     160,
   );
   const dummy = new T.Object3D();

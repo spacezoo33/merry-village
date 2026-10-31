@@ -60,7 +60,9 @@ export function parsePreferences(raw: string | null): Preferences {
     const p = JSON.parse(raw ?? "{}");
     if (!p || typeof p !== "object") return result;
     if (VILLAGES.some((v) => v.id === p.village)) result.village = p.village;
-    if (TRACKS.some((t) => t.id === p.track)) result.track = p.track;
+    if (TRACKS.some((t) => t.id === p.track && t.available))
+      result.track = p.track;
+    else if (p.track === "lullaby") result.track = "letter";
     if (NIGHTS.some((n) => n.id === p.effect)) result.effect = p.effect;
     if (typeof p.motion === "boolean") result.motion = p.motion;
     if (LIGHT_PATTERNS.some((v) => v.id === p.lightPattern))

@@ -33,8 +33,13 @@ test("legacy layouts remain recoverable; catalog provides three free and three s
   );
   assert.equal(NIGHTS.length, 3);
   assert.equal(TRACKS.length, 5);
-  assert.equal(new Set(TRACKS.map((t) => t.notes.join(","))).size, 5);
-  for (const track of TRACKS) {
+  assert.equal(TRACKS.filter((t) => t.available).length, 4);
+  assert.equal(
+    new Set(TRACKS.filter((t) => t.available).map((t) => t.notes.join(",")))
+      .size,
+    4,
+  );
+  for (const track of TRACKS.filter((t) => t.available)) {
     assert.ok(track.notes.some((n) => n > 0));
     assert.ok(track.notes.length >= 32);
   }

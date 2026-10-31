@@ -1,5 +1,6 @@
-import { architecturalPoints } from "./rail-profiles";
-import { lightLevel, type LightPattern } from "./lighting";
+import { SNOW_COUNTS, type SnowQuality } from "./snow";
+import { drawDecorLights } from "./decor-lights";
+import { type LightPattern } from "./lighting";
 import background from "./assets/christmas-room.png";
 import { productAtlas, productCrop } from "./product";
 import type { NightId, VillageId } from "./catalog";
@@ -37,7 +38,14 @@ export async function captureVillage(
   canvas.height = 1560;
   const c = canvas.getContext("2d");
   if (!c) throw new Error("사진 저장을 지원하지 않아요.");
-  c.drawImage(bg, 0, 0, 1200, 1560);
+  const bgScale = Math.max(1200 / bg.width, 1560 / bg.height);
+  c.drawImage(
+    bg,
+    (1200 - bg.width * bgScale) / 2,
+    (1560 - bg.height * bgScale) / 2,
+    bg.width * bgScale,
+    bg.height * bgScale,
+  );
   c.fillStyle = "#1c0c0744";
   c.fillRect(0, 0, 1200, 1560);
   if (effect === "aurora") {
@@ -53,34 +61,43 @@ export async function captureVillage(
     c.bezierCurveTo(700, 270, 400, 760, 0, 330);
     c.fill();
   }
+  const quality = (document.querySelector<HTMLElement>("#app")?.dataset
+    .snowQuality ?? "high") as SnowQuality;
+  const counts = SNOW_COUNTS[quality] ?? SNOW_COUNTS.high;
+  const pixelScale =
+    1200 / (document.querySelector<HTMLElement>(".hero")?.clientWidth ?? 375);
+  const drawSnow = (depth: "back" | "mid" | "front") => {
+    if (!snow) return;
+    for (let i = 0; i < counts[depth]; i++) {
+      const x = (i * 197 + (depth === "front" ? 113 : 31)) % 1200,
+        y = (i * 137 + 41 + (depth === "mid" ? 173 : 0)) % 1560;
+      const radius =
+        ((((depth === "back" ? 2 : depth === "mid" ? 4 : 7) + (i % 3)) * 1.75) /
+          2) *
+        pixelScale;
+      const g = c.createRadialGradient(x, y, 0, x, y, radius);
+      g.addColorStop(0, depth === "back" ? "#fff9ed88" : "#fffbedcc");
+      g.addColorStop(0.5, "#fff9ec77");
+      g.addColorStop(1, "#fff9ec00");
+      c.fillStyle = g;
+      c.fillRect(x - radius, y - radius, 2 * radius, 2 * radius);
+    }
+  };
+  drawSnow("back");
   const [sx, sy, sw, sh] = productCrop(id);
   c.drawImage(atlas, sx, sy, sw, sh, 0, 180, 1200, 1200);
+  drawSnow("mid");
   if (actors) c.drawImage(actors, 0, 180, 1200, 1200);
-  if (lights) {
-    for (let i = 0; i < 12; i++) {
-      const point = architecturalPoints(id)[i]!,
-        x = point.x * 12,
-        y = 180 + point.y * 12;
-      const g = c.createRadialGradient(
-        x,
-        y,
-        0,
-        x,
-        y,
-        effect === "wishes" ? 40 : 21,
-      );
-      const alpha = lightLevel(
-        pattern,
-        lightingTime,
-        i,
-        matchMedia("(prefers-reduced-motion: reduce)").matches,
-      );
-      g.addColorStop(0, `rgba(255,206,124,${alpha * 0.8})`);
-      g.addColorStop(1, "#ffb94c00");
-      c.fillStyle = g;
-      c.fillRect(x - 40, y - 40, 80, 80);
-    }
-  }
+  drawDecorLights(
+    c,
+    id,
+    pattern,
+    lightingTime,
+    lights,
+    effect === "wishes",
+    1200,
+    180,
+  );
   if (effect === "shooting") {
     for (let i = 0; i < 45; i++) {
       const x = (i * 197 + 30) % 1200,
@@ -91,20 +108,7 @@ export async function captureVillage(
       c.fill();
     }
   }
-  if (snow) {
-    c.fillStyle = "#fff9e2c2";
-    for (let i = 0; i < 48; i++) {
-      c.beginPath();
-      c.arc(
-        (i * 197 + 63) % 1200,
-        (i * 137 + 37) % 1560,
-        1.5 + (i % 3),
-        0,
-        Math.PI * 2,
-      );
-      c.fill();
-    }
-  }
+  drawSnow("front");
   return new Promise((resolve, reject) =>
     canvas.toBlob(
       (b) => (b ? resolve(b) : reject(new Error("PNG 생성 실패"))),

@@ -8,9 +8,9 @@ export function tunnelPortals(id: VillageId) {
   return [p.left, p.right].map(([x, y]) => ({
     x,
     y: y - 12,
-    rx: 23,
-    ry: 25,
-    bottom: y + 9,
+    rx: 21,
+    ry: 23,
+    bottom: y + 7,
   }));
 }
 export function inPortal(id: VillageId, x: number, y: number) {

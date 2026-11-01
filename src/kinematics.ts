@@ -1,8 +1,9 @@
+import { TRAIN_LAP_SECONDS } from "./train-timing.ts";
 /** Real circular track in ground space; camera projection produces the visible ellipse. */
 export const RADIUS = 0.96;
 export const TUNNEL_Z = 0.49;
 export const TRACK_START = Math.asin(TUNNEL_Z / RADIUS);
-export const TRAIN_SECONDS = 18;
+export const TRAIN_SECONDS = TRAIN_LAP_SECONDS;
 export const TREE_SECONDS = 37;
 export const CAR_LENGTHS = [0.34, 0.3, 0.3] as const;
 export const COUPLER_LENGTH = 0.035;

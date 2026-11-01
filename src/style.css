@@ -1860,3 +1860,19 @@ h1 span {
   width: var(--light-w);
   height: var(--light-h);
 }
+
+/* Optical rays share the emitter opacity, so every lighting pattern controls them. */
+.decor-bulb.lamp .bulb-emitter::after {
+  content: "";
+  position: absolute;
+  inset: -160% -220%;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 5%, #ffd17a99 46%, #fff7dc 50%, #ffd17a99 54%, transparent 95%),
+    linear-gradient(0deg, transparent 5%, #ffd17a99 46%, #fff7dc 50%, #ffd17a99 54%, transparent 95%);
+  clip-path: polygon(49% 0, 52% 43%, 75% 25%, 57% 48%, 100% 49%, 100% 51%, 57% 52%, 75% 75%, 52% 57%, 51% 100%, 49% 100%, 48% 57%, 25% 75%, 43% 52%, 0 51%, 0 49%, 43% 48%, 25% 25%, 48% 43%);
+}
+.decor-bulb.tunnel .bulb-emitter {
+  background: radial-gradient(ellipse, #fff4d9, #ffc56c99 35%, #ffb44833 65%, transparent);
+  box-shadow: 0 0 9px 3px #ffc16499, 0 7px 15px 4px #ffa53544;
+}

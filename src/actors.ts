@@ -399,12 +399,15 @@ export class Actors {
       new T.SpriteMaterial({
         map,
         transparent: true,
+        depthTest: false,
         blending: T.AdditiveBlending,
         depthWrite: false,
       }),
     );
+    this.starGlow.renderOrder = 4;
     this.starGlow.position.copy(star.position);
-    this.starGlow.scale.set(0.37, 0.37, 1);
+    this.starGlow.position.z += 0.025;
+    this.starGlow.scale.set(0.48, 0.48, 1);
     tree.add(this.starGlow);
     this.starLight = new T.PointLight(0xffc56e, 0.4, 0.8, 2);
     this.starLight.position.copy(star.position);
@@ -452,6 +455,9 @@ export class Actors {
                 portals[1]!.ry,
               ),
             };
+            shader.uniforms.portalBottom = {
+              value: new T.Vector2(portals[0]!.bottom, portals[1]!.bottom),
+            };
             shader.uniforms.portalHeight = { value: this.calibration.height };
             shader.uniforms.portalDepth = { value: this.calibration.tunnelZ };
             shader.vertexShader =
@@ -468,16 +474,17 @@ export class Actors {
               `varying vec3 tunnelWorld; varying vec2 tunnelPixel;
               uniform vec4 portalLeft; uniform vec4 portalRight;
               uniform float portalHeight; uniform float portalDepth;
-              bool openMouth(vec2 pixel, vec4 p) {
+              uniform vec2 portalBottom;
+              bool openMouth(vec2 pixel, vec4 p, float bottom) {
                 vec2 d = (pixel-p.xy)/p.zw;
-                return pixel.y <= p.y+21. && abs(d.x)<=1. && (d.y>=0. || dot(d,d)<=1.);
+                return pixel.y <= bottom && abs(d.x)<=1. && (d.y>=0. || dot(d,d)<=1.);
               }
             ` + shader.fragmentShader;
             shader.fragmentShader = shader.fragmentShader.replace(
               "#include <clipping_planes_fragment>",
               `#include <clipping_planes_fragment>
               vec2 atlasPixel = vec2(tunnelPixel.x*512., (1.-tunnelPixel.y)*portalHeight);
-              if (tunnelWorld.z < portalDepth + .12 && !openMouth(atlasPixel,portalLeft) && !openMouth(atlasPixel,portalRight)) discard;
+              if (tunnelWorld.z < portalDepth + .04 && !openMouth(atlasPixel,portalLeft,portalBottom.x) && !openMouth(atlasPixel,portalRight,portalBottom.y)) discard;
             `,
             );
             shader.fragmentShader = shader.fragmentShader.replace(
@@ -490,7 +497,7 @@ export class Actors {
             );
           };
           m.customProgramCacheKey = () =>
-            original.customProgramCacheKey() + "|merry-tunnel-aperture-v1";
+            original.customProgramCacheKey() + "|merry-tunnel-aperture-v2";
           m.clippingPlanes = [tunnel];
           o.material = m;
         }
@@ -625,8 +632,8 @@ export class Actors {
         (b.material.emissiveIntensity =
           starLevel * (this.settings.gold ? 3.3 : 2.5)),
     );
-    if (this.starGlow) this.starGlow.material.opacity = starLevel * 0.8;
-    if (this.starLight) this.starLight.intensity = starLevel * 0.75;
+    if (this.starGlow) this.starGlow.material.opacity = Math.min(1, starLevel * 1.1);
+    if (this.starLight) this.starLight.intensity = starLevel;
     for (const [i, bulb] of this.architecture.entries()) {
       const level = lightLevel(
         this.settings.pattern,
@@ -646,7 +653,7 @@ export class Actors {
     ) {
       this.onTrainPosition(
         this.elapsed,
-        (poses[0]!.x - this.calibration.left) / this.calibration.spanX,
+        0.5 + poses[0]!.x / this.calibration.spanX,
         poses[0]!.z >= this.calibration.tunnelZ,
       );
     }

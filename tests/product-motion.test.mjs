@@ -38,7 +38,7 @@ test("connected carriages stay on one circular ground track and couplers attach 
       }
     });
   }
-  assert.ok(TRAIN_SECONDS >= 15 && TRAIN_SECONDS <= 20);
+  assert.equal(TRAIN_SECONDS, 13);
   assert.ok(TREE_SECONDS >= 30 && TREE_SECONDS <= 40);
 });
 test("new controls default to on and safely migrate old saved preferences", () => {

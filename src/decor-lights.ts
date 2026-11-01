@@ -197,11 +197,11 @@ export function decorBulbs(id: VillageId): DecorBulb[] {
     ...arches.map((v) => ({ ...v, color: "#ffd48c" })),
     ...[p.left, p.right].map(([x, y]) => ({
       x,
-      y: y - 18,
+      y: y - 26,
       color: "#ffc97d",
       kind: "tunnel" as const,
-      w: 5,
-      h: 4,
+      w: 7,
+      h: 5,
     })),
   ];
 }
@@ -266,6 +266,23 @@ export function drawDecorLights(
     c.beginPath();
     c.arc(x, y, scale, 0, Math.PI * 2);
     c.fill();
+    if (p.kind === "lamp") {
+      for (let ray = 0; ray < 8; ray++) {
+        const a = ray * Math.PI / 4,
+          length = scale * (ray % 2 ? 7 : 13);
+        const gradient = c.createLinearGradient(
+          x, y, x + Math.cos(a) * length, y + Math.sin(a) * length,
+        );
+        gradient.addColorStop(0, "#fff7dc");
+        gradient.addColorStop(1, "#ffd17a00");
+        c.strokeStyle = gradient;
+        c.lineWidth = scale * (ray % 2 ? 0.7 : 1);
+        c.beginPath();
+        c.moveTo(x, y);
+        c.lineTo(x + Math.cos(a) * length, y + Math.sin(a) * length);
+        c.stroke();
+      }
+    }
     c.globalAlpha = 1;
   });
 }

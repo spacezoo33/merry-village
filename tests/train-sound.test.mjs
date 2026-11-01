@@ -64,3 +64,45 @@ test("horn follows visible front-centre crossings, not elapsed time, and dedupli
     globalThis.AudioContext = original;
   }
 });
+
+test("13-second journeys honk once per visible centre crossing in all six villages", async () => {
+  const { RAIL_PROFILES, railCalibration } = await import("../src/rail-profiles.ts");
+  const { TRAIN_LAP_SECONDS } = await import("../src/train-timing.ts");
+  const original = globalThis.AudioContext;
+  globalThis.AudioContext = FakeContext;
+  try {
+    assert.equal(TRAIN_LAP_SECONDS, 13);
+    for (const id of Object.keys(RAIL_PROFILES)) {
+      const sound = new TrainSound(() => {});
+      try {
+        const calibration = railCalibration(id);
+        assert.equal(calibration.lap, 13);
+        sound.setRunning(true);
+        await wait();
+        for (let frame = 0; frame <= 13 * 3 * 60; frame++) {
+          const journey = frame / 60;
+          audioContext().currentTime = journey;
+          const angle = .85 + Math.max(0, journey - .65) / calibration.lap * 2 * Math.PI;
+          sound.updatePosition(journey, .5 + calibration.radius * Math.cos(angle) / calibration.spanX,
+            calibration.radius * Math.sin(angle) >= calibration.tunnelZ, id);
+        }
+        assert.equal(sound.diagnostics.horns, 3, id);
+        const times = sound.diagnostics.hornTimes;
+        assert.ok(Math.abs(times[1] - times[0] - 13) < 1 / 60);
+        assert.ok(Math.abs(times[2] - times[1] - 13) < 1 / 60);
+      } finally { sound.destroy(); disposeAudio(); }
+    }
+  } finally { globalThis.AudioContext = original; }
+});
+
+test("a hidden-to-visible jump across centre never creates a late horn", async () => {
+  const original = globalThis.AudioContext;
+  globalThis.AudioContext = FakeContext;
+  const sound = new TrainSound(() => {});
+  try {
+    sound.setRunning(true); await wait();
+    sound.updatePosition(2, .55, false, "cozy");
+    sound.updatePosition(2.1, .49, true, "cozy");
+    assert.equal(sound.diagnostics.horns, 0);
+  } finally { sound.destroy(); disposeAudio(); globalThis.AudioContext = original; }
+});

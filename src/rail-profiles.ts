@@ -1,3 +1,4 @@
+import { TRAIN_LAP_SECONDS } from "./train-timing.ts";
 import type { VillageId } from "./catalog.ts";
 /** Landmarks measured in each original atlas viewport, NOT in CSS screen pixels.
  * Mouths are wheel/rail contact points below the arch; front is centre of the dark track bed.
@@ -20,7 +21,7 @@ export const RAIL_PROFILES: Record<VillageId, RailProfile> = {
     height: 512,
     treeFoot: 288,
     scale: 1,
-    lap: 18,
+    lap: TRAIN_LAP_SECONDS,
   },
   forest: {
     left: [127, 345],
@@ -29,7 +30,7 @@ export const RAIL_PROFILES: Record<VillageId, RailProfile> = {
     height: 512,
     treeFoot: 288,
     scale: 0.98,
-    lap: 18,
+    lap: TRAIN_LAP_SECONDS,
   },
   chapel: {
     left: [127, 344],
@@ -38,7 +39,7 @@ export const RAIL_PROFILES: Record<VillageId, RailProfile> = {
     height: 512,
     treeFoot: 288,
     scale: 1,
-    lap: 18,
+    lap: TRAIN_LAP_SECONDS,
   },
   workshop: {
     left: [130, 300],
@@ -47,7 +48,7 @@ export const RAIL_PROFILES: Record<VillageId, RailProfile> = {
     height: 505,
     treeFoot: 245,
     scale: 0.98,
-    lap: 18,
+    lap: TRAIN_LAP_SECONDS,
   },
   palace: {
     left: [128, 298],
@@ -56,7 +57,7 @@ export const RAIL_PROFILES: Record<VillageId, RailProfile> = {
     height: 505,
     treeFoot: 243,
     scale: 0.98,
-    lap: 18,
+    lap: TRAIN_LAP_SECONDS,
   },
   gingerbread: {
     left: [126, 300],
@@ -65,7 +66,7 @@ export const RAIL_PROFILES: Record<VillageId, RailProfile> = {
     height: 505,
     treeFoot: 245,
     scale: 0.98,
-    lap: 18,
+    lap: TRAIN_LAP_SECONDS,
   },
 };
 export const PORTAL_ANGLE = 0.6;

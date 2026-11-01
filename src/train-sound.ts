@@ -17,7 +17,11 @@ export class TrainSound {
   private voices = new Set<AudioScheduledSourceNode>();
   private wanted = false;
   private generation = 0;
-  private previousPosition: { journey: number; x: number } | null = null;
+  private previousPosition: {
+    journey: number;
+    x: number;
+    visible: boolean;
+  } | null = null;
   private lastPass = -1;
   private village = "";
   private history: number[] = [];
@@ -116,7 +120,7 @@ export class TrainSound {
       return;
     }
     const previous = this.previousPosition;
-    this.previousPosition = { journey, x };
+    this.previousPosition = { journey, x, visible };
     if (
       !previous ||
       journey <= previous.journey ||
@@ -124,7 +128,11 @@ export class TrainSound {
     )
       return;
     const pass = Math.floor(Math.max(0, journey - 0.65) / TRAIN_LAP_SECONDS);
-    if (visible && previous.x > 0.5 && x <= 0.5 && pass !== this.lastPass) {
+    if (
+      visible && previous.visible &&
+      previous.x > 0.5 && x <= 0.5 &&
+      pass !== this.lastPass
+    ) {
       this.lastPass = pass;
       this.horn(this.context.currentTime);
       this.history.push(this.context.currentTime);

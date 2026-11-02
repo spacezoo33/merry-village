@@ -16,7 +16,7 @@ test("horn follows visible front-centre crossings, not elapsed time, and dedupli
     sound.updatePosition(2, 0.55, true, "cozy");
     sound.updatePosition(2.8, 0.49, true, "cozy");
     assert.equal(sound.diagnostics.horns, 1);
-    assert.equal(c.oscillators.length, 3);
+    assert.equal(c.oscillators.length, 10);
     sound.updatePosition(2.8, 0.49, true, "cozy");
     sound.updatePosition(2.9, 0.48, true, "cozy");
     assert.equal(sound.diagnostics.horns, 1);
@@ -66,7 +66,7 @@ test("horn follows visible front-centre crossings, not elapsed time, and dedupli
 });
 
 test("13-second journeys honk once per visible centre crossing in all six villages", async () => {
-  const { RAIL_PROFILES, railCalibration } = await import("../src/rail-profiles.ts");
+  const { RAIL_PROFILES, railCalibration, projectRail } = await import("../src/rail-profiles.ts");
   const { TRAIN_LAP_SECONDS } = await import("../src/train-timing.ts");
   const original = globalThis.AudioContext;
   globalThis.AudioContext = FakeContext;
@@ -83,7 +83,7 @@ test("13-second journeys honk once per visible centre crossing in all six villag
           const journey = frame / 60;
           audioContext().currentTime = journey;
           const angle = .85 + Math.max(0, journey - .65) / calibration.lap * 2 * Math.PI;
-          sound.updatePosition(journey, .5 + calibration.radius * Math.cos(angle) / calibration.spanX,
+          sound.updatePosition(journey, projectRail(id, angle).x / 512,
             calibration.radius * Math.sin(angle) >= calibration.tunnelZ, id);
         }
         assert.equal(sound.diagnostics.horns, 3, id);

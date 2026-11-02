@@ -73,3 +73,28 @@ export function disposeAudio() {
   shared = null;
   bus = null;
 }
+
+/** Duck only accompaniment; user volume remains on MusicPlayer's own gain. */
+export function duckForWhistle(inputs: Record<AudioStem, GainNode>, at: number, duration: number) {
+  for (const [name, level] of [["music", .28], ["train", .38]] as const) {
+    const gain = inputs[name].gain;
+    gain.cancelScheduledValues(at);
+    gain.setValueAtTime(1, at);
+    gain.linearRampToValueAtTime(level, at + .04);
+    gain.setValueAtTime(level, at + duration);
+    gain.linearRampToValueAtTime(1, at + duration + .3);
+  }
+}
+export function duckAccompaniment(duration: number) {
+  const c = audioContext();
+  bus ??= createAudioBus(c);
+  duckForWhistle(bus.inputs, c.currentTime, duration);
+}
+export function releaseAccompaniment() {
+  if (!bus || !shared) return;
+  for (const name of ["music", "train"] as const) {
+    const gain = bus.inputs[name].gain;
+    gain.cancelScheduledValues(shared.currentTime);
+    gain.setTargetAtTime(1, shared.currentTime, .06);
+  }
+}

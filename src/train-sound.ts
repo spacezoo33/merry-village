@@ -3,7 +3,30 @@ import {
   chuffOffset,
   TRAIN_LAP_SECONDS,
 } from "./train-timing.ts";
-import { audioContext, audioStem } from "./audio-engine.ts";
+import { scheduleSteamWhistle, WHISTLE_SECONDS } from "./steam-whistle.ts";
+import { audioContext, audioStem, duckAccompaniment, releaseAccompaniment } from "./audio-engine.ts";
+export function createChuffBuffer(c: BaseAudioContext) {
+  const rate = 22050,
+    b = c.createBuffer(1, Math.round(rate * CHUFF_SECONDS * 4), rate),
+    data = b.getChannelData(0);
+  let seed = 12345,
+    last = 0;
+  for (let i = 0; i < data.length; i++) {
+    seed = (seed * 16807) % 2147483647;
+    const white = (seed / 2147483647) * 2 - 1;
+    last = 0.62 * last + 0.38 * white;
+    const phase = (i / rate) % CHUFF_SECONDS,
+      envelope = Math.min(1, phase / 0.024) * Math.exp(-phase * 18);
+    data[i] = last * (0.2 * envelope + 0.009);
+  }
+  for (let i = 0; i < 128; i++) {
+    const f = i / 128;
+    data[data.length - 128 + i] =
+      data[data.length - 128 + i]! * (1 - f) + data[0]! * f;
+  }
+  return b;
+}
+
 /** Seamless in-house loop + horns queued on the AUDIO clock, independent of rendering. */
 export class TrainSound {
   private context: AudioContext | null = null;
@@ -35,27 +58,6 @@ export class TrainSound {
     if (running) void this.unlock();
     else this.stop();
   }
-  private makeBuffer(c: AudioContext) {
-    const rate = 22050,
-      b = c.createBuffer(1, Math.round(rate * CHUFF_SECONDS * 4), rate),
-      data = b.getChannelData(0);
-    let seed = 12345,
-      last = 0;
-    for (let i = 0; i < data.length; i++) {
-      seed = (seed * 16807) % 2147483647;
-      const white = (seed / 2147483647) * 2 - 1;
-      last = 0.62 * last + 0.38 * white;
-      const phase = (i / rate) % CHUFF_SECONDS,
-        envelope = Math.min(1, phase / 0.024) * Math.exp(-phase * 18);
-      data[i] = last * (0.2 * envelope + 0.009);
-    }
-    for (let i = 0; i < 128; i++) {
-      const f = i / 128;
-      data[data.length - 128 + i] =
-        data[data.length - 128 + i]! * (1 - f) + data[0]! * f;
-    }
-    return b;
-  }
   syncJourney(seconds: number) {
     if (!this.loop) {
       this.journey = seconds;
@@ -71,7 +73,7 @@ export class TrainSound {
         this.output = c.createGain();
         this.output.gain.value = 0.75;
         this.output.connect(audioStem("train"));
-        this.buffer = this.makeBuffer(c);
+        this.buffer = createChuffBuffer(c);
       }
       const c = this.context;
       await Promise.race([c.resume(), new Promise((r) => setTimeout(r, 350))]);
@@ -140,35 +142,20 @@ export class TrainSound {
     }
   }
   private horn(at: number) {
-    const c = this.context!;
-    for (const [hz, level] of [
-      [440, 0.021 * 0.55],
-      [554.37, 0.012 * 0.55],
-      [659.25, 0.008 * 0.55],
-    ]) {
-      const source = c.createOscillator(),
-        e = c.createGain();
-      source.type = "sine";
-      source.frequency.setValueAtTime(hz!, at);
-      source.frequency.linearRampToValueAtTime(hz! * 0.985, at + 1.1);
-      e.gain.setValueAtTime(0, at);
-      e.gain.linearRampToValueAtTime(level!, at + 0.17);
-      e.gain.setValueAtTime(level!, at + 0.65);
-      e.gain.exponentialRampToValueAtTime(0.0001, at + 1.25);
-      source.connect(e);
-      e.connect(audioStem("horn"));
-      source.start(at);
-      source.stop(at + 1.3);
-      this.voices.add(source);
-      source.onended = () => {
-        this.voices.delete(source);
-        source.disconnect();
-        e.disconnect();
+    duckAccompaniment(WHISTLE_SECONDS);
+    for (const voice of scheduleSteamWhistle(this.context!, audioStem("horn"), at)) {
+      this.voices.add(voice);
+      const cleanup = voice.onended;
+      voice.onended = (event) => {
+        this.voices.delete(voice);
+        cleanup?.call(voice, event);
       };
     }
   }
+
   private stop() {
     this.generation++;
+    releaseAccompaniment();
     this.previousPosition = null;
     const c = this.context;
     if (c) {

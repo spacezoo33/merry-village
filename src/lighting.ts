@@ -54,3 +54,19 @@ export function nextLighting(state: { lightPattern: LightPattern }) {
 export function lightLabel(state: { lightPattern: LightPattern }) {
   return LIGHT_PATTERNS.find((p) => p.id === state.lightPattern)!.name;
 }
+
+/** Only the extra glare is modulated. Fast attack, softer decay back to warm bulbs. */
+export function extraLightLevel(
+  pattern: LightPattern, time: number, index: number,
+  reduced = false, screenX = .5,
+) {
+  if (reduced) return .35;
+  if (pattern === "gentle") return lightLevel(pattern, time, index, false, screenX);
+  const current = lightLevel(pattern, time, index, false, screenX);
+  const window = current ? .07 : .28;
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    sum += lightLevel(pattern, Math.max(0, time - window * i / 12), index, false, screenX);
+  }
+  return sum / 12;
+}

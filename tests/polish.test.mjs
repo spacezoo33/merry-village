@@ -57,7 +57,7 @@ test("all five independent carols produce finite non-silent music without an ext
   );
 });
 
-test("every village controls lamps/tunnels while windows have no modulation overlay", async () => {
+test("every village controls lamps only; windows and tunnel mouths have no modulation overlay", async () => {
   const { architecturalBulbs, decorBulbs } = await import(
     "../src/decor-lights.ts"
   );
@@ -67,7 +67,7 @@ test("every village controls lamps/tunnels while windows have no modulation over
     const bulbs = architecturalBulbs(id);
     assert.ok(bulbs.filter((b) => b.kind === "lamp").length >= 4);
     assert.ok(!bulbs.some((b) => b.kind === "window"));
-    assert.equal(decorBulbs(id).filter((b) => b.kind === "tunnel").length, 2);
+    assert.deepEqual(decorBulbs(id), []);
     for (const b of [...bulbs, ...decorBulbs(id)]) {
       assert.ok(b.x > 0 && b.x < 512 && b.y > 0 && b.y < 505);
       assert.equal(
@@ -97,4 +97,19 @@ test("portal masks preserve aperture interiors and reject stone at each village 
       assert.ok(!inPortal(id, p.x + p.rx + 1, p.y));
       assert.ok(!inPortal(id, p.x, p.bottom + 1));
     }
+});
+
+test("extra glare attacks quickly and fades to zero without changing the four source patterns", async () => {
+  const { extraLightLevel, LIGHT_PATTERNS } = await import("../src/lighting.ts");
+  assert.equal(extraLightLevel("all", 1.5, 0), 0);
+  assert.equal(extraLightLevel("all", .5, 0), 1);
+  assert.ok(extraLightLevel("all", 1.02, 0) > .5, "decay should retain a soft tail");
+  assert.ok(extraLightLevel("all", 2.06, 0) > .75, "attack should be faster than decay");
+  for (const { id } of LIGHT_PATTERNS) {
+    for (let i = 0; i < 100; i++) {
+      const level = extraLightLevel(id, i / 20, i, false, (i % 10) / 10);
+      assert.ok(level >= 0 && level <= 1);
+    }
+    assert.equal(extraLightLevel(id, 2, 0, true), .35);
+  }
 });

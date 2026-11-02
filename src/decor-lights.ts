@@ -1,11 +1,12 @@
+import { drawGoldenGlow } from "./golden-glow.ts";
 import { RAIL_PROFILES } from "./rail-profiles.ts";
 import type { VillageId } from "./catalog.ts";
-import { lightLevel, type LightPattern } from "./lighting.ts";
+import { extraLightLevel, type LightPattern } from "./lighting.ts";
 export type DecorBulb = {
   x: number;
   y: number;
   color: string;
-  kind?: "lamp" | "tunnel";
+  kind?: "lamp";
   w?: number;
   h?: number;
 };
@@ -177,40 +178,14 @@ export function architecturalBulbs(id: VillageId): DecorBulb[] {
   ];
 }
 
-/** Measured source-cell paths for the two tunnel mouths only. */
-function curve(a: number[], control: number[], b: number[], count: number) {
-  return Array.from({ length: count }, (_, i) => {
-    const t = i / (count - 1),
-      u = 1 - t;
-    return {
-      x: u * u * a[0]! + 2 * u * t * control[0]! + t * t * b[0]!,
-      y: u * u * a[1]! + 2 * u * t * control[1]! + t * t * b[1]!,
-    };
-  });
-}
-export function decorBulbs(id: VillageId): DecorBulb[] {
-  const p = RAIL_PROFILES[id];
-  const arches = [p.left, p.right].flatMap(([x, y]) =>
-    curve([x - 24, y - 24], [x, y - 71], [x + 24, y - 24], 14),
-  );
-  return [
-    ...arches.map((v) => ({ ...v, color: "#ffd48c" })),
-    ...[p.left, p.right].map(([x, y]) => ({
-      x,
-      y: y - 26,
-      color: "#ffc97d",
-      kind: "tunnel" as const,
-      w: 7,
-      h: 5,
-    })),
-  ];
-}
+/** No synthetic lights in either tunnel, including the former arch garlands. */
+export function decorBulbs(_id: VillageId): DecorBulb[] { return []; }
 export function decorMarkup(id: VillageId) {
   const height = RAIL_PROFILES[id].height;
   return [...decorBulbs(id), ...architecturalBulbs(id)]
     .map(
       (p) =>
-        `<i class="decor-bulb ${p.kind ?? "garland"}" style="--light-w:${((p.w ?? 2.56) / 512) * 100}%;--light-h:${((p.h ?? 2.56) / height) * 100}%;left:${(p.x / 512) * 100}%;top:${(p.y / height) * 100}%;--bulb-color:${p.color}"><span class="bulb-emitter"></span></i>`,
+        `<i class="decor-bulb ${p.kind ?? "garland"}" style="--light-w:${((p.w ?? 2.56) / 512) * 100}%;--light-h:${((p.h ?? 2.56) / height) * 100}%;left:${(p.x / 512) * 100}%;top:${(p.y / height) * 100}%;--bulb-color:${p.color}"><span class="bulb-emitter"></span><span class="bulb-flare"></span></i>`,
     )
     .join("");
 }
@@ -228,61 +203,20 @@ export function drawDecorLights(
   [...decorBulbs(id), ...architecturalBulbs(id)].forEach((p, i) => {
     const x = p.x * scale,
       y = top + (p.y / height) * width,
-      level = lightLevel(
+      level = extraLightLevel(
         pattern,
         time,
         i + 100,
         matchMedia("(prefers-reduced-motion: reduce)").matches,
         p.x / 512,
       );
-    c.fillStyle = "#27351e";
-    c.beginPath();
-    c.arc(x, y, scale * 0.8, 0, Math.PI * 2);
-    c.fill();
-    if (p.kind) {
-      c.fillStyle = `rgba(30, 18, 10, ${0.76 * (1 - level)})`;
-      c.fillRect(
-        x - (p.w! * scale) / 2,
-        y - (p.h! * scale) / 2,
-        p.w! * scale,
-        p.h! * scale,
-      );
-    }
-    if (!level) return;
-    const r = scale * (p.kind ? (gold ? 17 : 13) : gold ? 6 : 4),
-      g = c.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(
-      0,
-      p.color +
-        Math.round(level * 190)
-          .toString(16)
-          .padStart(2, "0"),
-    );
-    g.addColorStop(1, p.color + "00");
-    c.fillStyle = g;
-    c.fillRect(x - r, y - r, 2 * r, 2 * r);
-    c.globalAlpha = level;
-    c.fillStyle = p.color;
-    c.beginPath();
-    c.arc(x, y, scale, 0, Math.PI * 2);
-    c.fill();
-    if (p.kind === "lamp") {
-      for (let ray = 0; ray < 8; ray++) {
-        const a = ray * Math.PI / 4,
-          length = scale * (ray % 2 ? 7 : 13);
-        const gradient = c.createLinearGradient(
-          x, y, x + Math.cos(a) * length, y + Math.sin(a) * length,
-        );
-        gradient.addColorStop(0, "#fff7dc");
-        gradient.addColorStop(1, "#ffd17a00");
-        c.strokeStyle = gradient;
-        c.lineWidth = scale * (ray % 2 ? 0.7 : 1);
-        c.beginPath();
-        c.moveTo(x, y);
-        c.lineTo(x + Math.cos(a) * length, y + Math.sin(a) * length);
-        c.stroke();
-      }
-    }
-    c.globalAlpha = 1;
+    // Always draw the small warm source; OFF never covers the original atlas in black.
+    c.save();
+    c.fillStyle = "#fff0b2";
+    c.shadowColor = "#ffcd75";
+    c.shadowBlur = scale * 2;
+    c.beginPath(); c.ellipse(x, y, scale * 1.15, scale * 1.7, 0, 0, Math.PI * 2); c.fill();
+    c.restore();
+    drawGoldenGlow(c, x, y, scale * (gold ? 24 : 21), level);
   });
 }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 export const wait = () => new Promise((r) => setTimeout(r, 0));
 const parameter = () => ({
   value: 0,
+  cancelScheduledValues() {},
   setValueAtTime() {},
   linearRampToValueAtTime() {},
   exponentialRampToValueAtTime() {},

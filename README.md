@@ -77,3 +77,5 @@ npm run preview
 공개 Pages에는 웹 번들만 올립니다. 비밀키를 `VITE_*`에 넣으면 브라우저 코드에 포함되므로 사용하지 마세요. 서버용 인증 정보는 GitHub Secrets/서버 설정에서만 다루고 웹 빌드로 전달하지 않습니다. 현재 웹 개발에는 Secrets가 필요하지 않습니다.
 
 실제 토스 기기 테스트, 콘솔 업로드, 최신 GitHub Actions 결과, Pages 배포는 별도 확인 사항입니다. [SDK 에셋 설명](src/assets/README.md)과 공식 문서 https://developers-apps-in-toss.toss.im/ 을 참고하세요.
+
+조명 기본광/추가광 분리와 실제 Web Audio 출력 측정은 [검증 기록](docs/lighting-audio-validation.md)을 참고하세요.

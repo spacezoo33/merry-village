@@ -1,16 +1,24 @@
-import atlas from "./assets/product-villages.png";
-import { VILLAGES, type VillageId } from "./catalog";
-export { atlas as productAtlas };
-export function productCrop(id: VillageId): [number, number, number, number] {
-  const i = VILLAGES.findIndex((v) => v.id === id);
-  return [
-    (i % 3) * 512,
-    Math.floor(i / 3) * 512 + (i >= 3 ? 7 : 0),
-    512,
-    i >= 3 ? 505 : 512,
-  ];
-}
+import cozy from "./assets/villages/cozy.webp";
+import forest from "./assets/villages/forest.webp";
+import chapel from "./assets/villages/chapel.webp";
+import palace from "./assets/villages/palace.webp";
+import gingerbread from "./assets/villages/gingerbread.webp";
+import lake from "./assets/villages/aurora-lake.webp";
+import observatory from "./assets/villages/observatory.webp";
+import cozyThumb from "./assets/villages/cozy-thumb.webp";
+import forestThumb from "./assets/villages/forest-thumb.webp";
+import chapelThumb from "./assets/villages/chapel-thumb.webp";
+import palaceThumb from "./assets/villages/palace-thumb.webp";
+import gingerbreadThumb from "./assets/villages/gingerbread-thumb.webp";
+import lakeThumb from "./assets/villages/aurora-lake-thumb.webp";
+import observatoryThumb from "./assets/villages/observatory-thumb.webp";
+import type { VillageId } from "./catalog";
+const images: Record<VillageId, string> = { cozy, forest, chapel, palace, gingerbread, "aurora-lake": lake, observatory };
+const thumbs: Record<VillageId, string> = { cozy: cozyThumb, forest: forestThumb, chapel: chapelThumb, palace: palaceThumb, gingerbread: gingerbreadThumb, "aurora-lake": lakeThumb, observatory: observatoryThumb };
+export const productSource = (id: VillageId) => images[id];
 export function productImage(id: VillageId): string {
-  const [x, y, w, h] = productCrop(id);
-  return `<svg class="product-plate" preserveAspectRatio="none" viewBox="${x} ${y} ${w} ${h}" aria-hidden="true"><image href="${atlas}" width="1536" height="1024"/></svg>`;
+  return `<img class="product-plate" src="${images[id]}" width="627" height="627" alt="" decoding="async" />`;
+}
+export function productThumbnail(id: VillageId): string {
+  return `<img src="${thumbs[id]}" width="384" height="384" alt="" loading="lazy" decoding="async" />`;
 }

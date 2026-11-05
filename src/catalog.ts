@@ -27,15 +27,6 @@ export const VILLAGES = [
     kind: "chapel",
   },
   {
-    id: "workshop",
-    name: "산타의 선물 공방",
-    subtitle: "설렘을 포장하는 시간",
-    detail: "금빛 리본의 선물 공방과 산타의 작은 선물 기차.",
-    premium: true,
-    accent: "#e8a282",
-    kind: "workshop",
-  },
-  {
     id: "palace",
     name: "달빛 겨울 궁전",
     subtitle: "파란 얼음 위로 번지는 온기",
@@ -52,6 +43,16 @@ export const VILLAGES = [
     premium: true,
     accent: "#e9b494",
     kind: "gingerbread",
+  },
+  {
+    id: "aurora-lake", name: "오로라 호수 마을", subtitle: "백조와 얼음 다리가 빛나는 호숫가",
+    detail: "오로라 아래 얼음 전망대와 백조 조형물이 반기는 겨울 호수.",
+    premium: true, accent: "#a1dfd7", kind: "aurora-lake",
+  },
+  {
+    id: "observatory", name: "별빛 천문대", subtitle: "별빛 아치와 회전목마의 겨울밤",
+    detail: "돔 천문대와 황금빛 별, 작은 회전목마가 함께하는 겨울 정원.",
+    premium: true, accent: "#dfc98b", kind: "observatory",
   },
 ] as const;
 export type VillageId = (typeof VILLAGES)[number]["id"];

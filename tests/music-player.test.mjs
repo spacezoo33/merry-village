@@ -63,3 +63,19 @@ test("all tracks play with one source; pause, seek, loop and real end callbacks 
     globalThis.AudioContext = original;
   }
 });
+
+test("all five selections loop by default and an end callback never advances a looping source", async () => {
+  const original = globalThis.AudioContext; globalThis.AudioContext = FakeContext;
+  let ended = 0;
+  const p = new MusicPlayer("snow", .35, () => {}, () => ended++);
+  try {
+    for (const id of ["snow", "starlight", "waltz", "holy-night", "bethlehem"]) {
+      p.select(id); await p.play();
+      const source = audioContext().sources.at(-1);
+      assert.equal(source.loop, true);
+      source.onended();
+      assert.equal(ended, 0);
+      assert.equal(p.state, "playing");
+    }
+  } finally { p.destroy(); disposeAudio(); globalThis.AudioContext = original; }
+});

@@ -6,7 +6,7 @@ import { TRAIN_LAP_SECONDS, journeyLap } from "../src/train-timing.ts";
 import { RAIL_PROFILES, railCalibration, projectRail } from "../src/rail-profiles.ts";
 import { wait, FakeContext } from "./helpers/audio.mjs";
 
-test("only laps 6, 12 and 18 sound at visible camera-centre crossings in all six villages", async () => {
+test("only laps 6, 12 and 18 sound at visible camera-centre crossings in all seven villages", async () => {
   const original = globalThis.AudioContext; globalThis.AudioContext = FakeContext;
   try {
     assert.equal(TRAIN_LAP_SECONDS, 13);

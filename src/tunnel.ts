@@ -5,12 +5,12 @@ import type { VillageId } from "./catalog.ts";
  */
 export function tunnelPortals(id: VillageId) {
   const p = RAIL_PROFILES[id];
-  return [p.left, p.right].map(([x, y]) => ({
-    x,
-    y: y - 12,
+  return [p.left, p.right].map(([x, y], index) => ({
+    x: p.portalCentres?.[index]?.[0] ?? x,
+    y: p.portalCentres?.[index]?.[1] ?? y - 12,
     rx: 21,
     ry: 23,
-    bottom: y + 7,
+    bottom: y + (p.portalCentres ? 2 : 7),
   }));
 }
 export function inPortal(id: VillageId, x: number, y: number) {

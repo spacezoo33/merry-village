@@ -20,18 +20,20 @@ export type Preferences = {
   effect: NightId | null;
   volume: number;
   pass: Pass | null;
+  villagePasses: Partial<Record<VillageId, Pass>>;
 };
 export const defaults = (): Preferences => ({
   village: "cozy",
   track: "snow",
   snow: true,
-  repeat: false,
+  repeat: true,
   motion: true,
   lightPattern: "gentle",
   night: false,
   effect: null,
   volume: 0.35,
   pass: null,
+  villagePasses: {},
 });
 export function validPass(value: unknown): Pass | null {
   if (!value || typeof value !== "object") return null;
@@ -68,27 +70,36 @@ export function parsePreferences(raw: string | null): Preferences {
     if (typeof p.motion === "boolean") result.motion = p.motion;
     if (LIGHT_PATTERNS.some((v) => v.id === p.lightPattern))
       result.lightPattern = p.lightPattern;
-    if (typeof p.repeat === "boolean") result.repeat = p.repeat;
+    // Every selected song always loops, including preferences saved with repeat OFF.
     if (typeof p.snow === "boolean") result.snow = p.snow;
     if (typeof p.night === "boolean") result.night = p.night;
     if (typeof p.volume === "number" && Number.isFinite(p.volume))
       result.volume = Math.min(1, Math.max(0, p.volume));
     result.pass = validPass(p.pass);
+    for (const v of VILLAGES.filter(v => v.premium)) {
+      const pass = validPass(p.villagePasses?.[v.id]);
+      if (pass) result.villagePasses[v.id] = pass;
+    }
   } catch {
     /* Corrupt or inaccessible storage never prevents the app from opening. */
   }
   return result;
 }
+export function canUseVillage(p: Preferences, id: VillageId, now: number): boolean {
+  const village = VILLAGES.find(v => v.id === id);
+  return !!village && (!village.premium || hasPass(p.villagePasses[id] ?? null, now));
+}
+/** A reward is scoped to one village and never extends an active receipt. */
+export function grantVillagePass(p: Preferences, id: VillageId, now: number, earned: boolean): boolean {
+  if (!VILLAGES.find(v => v.id === id)?.premium || canUseVillage(p, id, now)) return false;
+  const pass = passForReward(now, earned);
+  if (!pass) return false;
+  p.villagePasses[id] = pass;
+  return true;
+}
 export function reconcileAccess(p: Preferences, now: number): boolean {
-  if (hasPass(p.pass, now)) return false;
   let changed = false;
-  if (VILLAGES.find((v) => v.id === p.village)?.premium) {
-    p.village = "cozy";
-    changed = true;
-  }
-  if (p.effect) {
-    p.effect = null;
-    changed = true;
-  }
+  if (!canUseVillage(p, p.village, now)) { p.village = "cozy"; changed = true; }
+  if (p.effect && !hasPass(p.pass, now)) { p.effect = null; changed = true; }
   return changed;
 }

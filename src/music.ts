@@ -8,7 +8,7 @@ export class MusicPlayer {
   private gain: GainNode | null = null;
   private source: AudioBufferSourceNode | null = null;
   private buffers = new Map<TrackId, AudioBuffer>();
-  private repeat = false;
+  private repeat = true;
   private ended: () => void;
   private offset = 0;
   private started = 0;

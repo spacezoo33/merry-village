@@ -1,8 +1,8 @@
 import { SNOW_COUNTS, snowSize, type SnowQuality } from "./snow";
 import { drawDecorLights } from "./decor-lights";
 import { type LightPattern } from "./lighting";
-import background from "./assets/christmas-room.png";
-import { productAtlas, productCrop } from "./product";
+import background from "./assets/christmas-room.webp";
+import { productSource } from "./product";
 import type { NightId, VillageId } from "./catalog";
 const images = new Map<string, Promise<HTMLImageElement>>();
 async function load(src: string) {
@@ -31,7 +31,8 @@ export async function captureVillage(
   pattern: LightPattern = "gentle",
   lightingTime = 0,
 ): Promise<Blob> {
-  const [bg, atlas] = await Promise.all([load(background), load(productAtlas)]);
+  for (const key of images.keys()) if (key !== background && key !== productSource(id)) images.delete(key);
+  const [bg, atlas] = await Promise.all([load(background), load(productSource(id))]);
   const canvas = document.createElement("canvas");
   canvas.width = 1200;
   canvas.height = 1560;
@@ -80,8 +81,7 @@ export async function captureVillage(
     }
   };
   drawSnow("back");
-  const [sx, sy, sw, sh] = productCrop(id);
-  c.drawImage(atlas, sx, sy, sw, sh, 0, 180, 1200, 1200);
+  c.drawImage(atlas, 0, 180, 1200, 1200);
   drawSnow("mid");
   if (actors) c.drawImage(actors, 0, 180, 1200, 1200);
   drawDecorLights(c, id, pattern, lightingTime, effect === "wishes", 1200, 180);

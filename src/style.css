@@ -19,7 +19,7 @@ body {
   min-width: 280px;
   background:
     linear-gradient(#24120b58, #190b08b8),
-    url("./assets/christmas-room.png") center/cover fixed;
+    url("./assets/christmas-room.webp") center/cover fixed;
 }
 button,
 input {
@@ -447,7 +447,7 @@ h1 span {
 }
 .night-theme body {
   background-image:
-    linear-gradient(#08132996, #120b12bd), url("./assets/christmas-room.png");
+    linear-gradient(#08132996, #120b12bd), url("./assets/christmas-room.webp");
 }
 .night #scene-host {
   filter: brightness(0.82) saturate(0.94);
@@ -1772,12 +1772,12 @@ h1 span {
 .snow-mid {
   opacity: 0.75;
 }
-#app[data-snow-quality="medium"] .snow-back i:nth-child(n + 19),
-#app[data-snow-quality="medium"] .snow-mid i:nth-child(n + 23),
-#app[data-snow-quality="medium"] .snow-front i:nth-child(n + 17),
-#app[data-snow-quality="low"] .snow-back i:nth-child(n + 15),
-#app[data-snow-quality="low"] .snow-mid i:nth-child(n + 19),
-#app[data-snow-quality="low"] .snow-front i:nth-child(n + 13) {
+#app[data-snow-quality="medium"] .snow-back i:nth-child(n + 28),
+#app[data-snow-quality="medium"] .snow-mid i:nth-child(n + 34),
+#app[data-snow-quality="medium"] .snow-front i:nth-child(n + 25),
+#app[data-snow-quality="low"] .snow-back i:nth-child(n + 22),
+#app[data-snow-quality="low"] .snow-mid i:nth-child(n + 28),
+#app[data-snow-quality="low"] .snow-front i:nth-child(n + 19) {
   display: none;
 }
 /* Separate controllable bulbs sit on architectural garlands/eaves, not window panes. */
@@ -1832,8 +1832,8 @@ h1 span {
 }
 
 /* Warm sources remain visible at OFF; patterns affect only the extra optical glare. */
-.architectural-lights .decor-bulb.lamp,
-#app[data-effect="wishes"] .architectural-lights .decor-bulb.lamp {
+.architectural-lights .decor-bulb:is(.lamp,.accent),
+#app[data-effect="wishes"] .architectural-lights .decor-bulb:is(.lamp,.accent) {
   width: var(--light-w);
   height: var(--light-h);
   margin: 0;
@@ -1842,16 +1842,16 @@ h1 span {
   filter: none;
   box-shadow: none;
 }
-.decor-bulb.lamp::before { display: none; }
-.decor-bulb.lamp .bulb-emitter,
-#app[data-effect="wishes"] .decor-bulb.lamp .bulb-emitter {
+.decor-bulb:is(.lamp,.accent)::before { display: none; }
+.decor-bulb:is(.lamp,.accent) .bulb-emitter,
+#app[data-effect="wishes"] .decor-bulb:is(.lamp,.accent) .bulb-emitter {
   inset: 24% 25%;
   opacity: 1;
   border-radius: 45%;
   background: #fff0b2;
   box-shadow: 0 0 3px 1px #ffcc7566;
 }
-.decor-bulb.lamp .bulb-flare {
+.decor-bulb:is(.lamp,.accent) .bulb-flare {
   position: absolute;
   width: 840%;
   aspect-ratio: 1;
@@ -1862,9 +1862,44 @@ h1 span {
   opacity: 0;
   will-change: opacity;
 }
-.decor-bulb.lamp .bulb-flare::after {
+.decor-bulb:is(.lamp,.accent) .bulb-flare::after {
   content: "";
   position: absolute;
   inset: 46% 23% -4%;
   background: radial-gradient(ellipse, #ffc65b22, transparent 70%);
 }
+
+/* Portrait WebView layout: retain full plates and reserve navigation/safe areas. */
+html, body { max-width: 100%; overflow-x: clip; }
+#app {
+  max-width: 560px; display: flex; flex-direction: column;
+  padding: max(8px, env(safe-area-inset-top), var(--toss-safe-top, 0px))
+    max(10px, env(safe-area-inset-right), var(--toss-safe-right, 0px))
+    max(12px, env(safe-area-inset-bottom), var(--toss-safe-bottom, 0px))
+    max(10px, env(safe-area-inset-left), var(--toss-safe-left, 0px));
+}
+.experience { flex: 1; min-width: 0; }
+.hero { margin: 0; padding-top: 64px; }
+#scene-host { width: min(100%, max(260px, calc(100svh - 320px - max(env(safe-area-inset-top), var(--toss-safe-top, 0px)) - max(env(safe-area-inset-bottom), var(--toss-safe-bottom, 0px))))); max-width: 512px; margin: 0 auto; }
+.scene-controls { top: 0; right: 0; gap: 6px; }
+.scene-controls button { width: 48px; height: 48px; min-height: 48px; padding: 4px; }
+.selected-village { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 3px; }
+.selected-village strong { display: block; font-size: 13px; }
+.selected-village small { display: block; font-size: 10px; line-height: 1.5; color: #ddc7a7; }
+.selected-village button { flex-shrink: 0; min-height: 44px; border-radius: 12px; background: #efcf86; color: #513716; font-size: 11px; padding: 6px 10px; }
+.now-playing { margin-top: 6px; padding: 8px; gap: 6px; }
+.transport, .round-play { min-width: 44px; min-height: 44px; }
+.bottom-nav { margin-top: 10px; gap: 6px; }
+.bottom-nav button { min-height: 64px; font-size: 10px; }
+.close-button, .text-button { min-width: 44px; min-height: 44px; }
+.sheet { width: min(560px, calc(100% - 16px)); max-height: calc(100svh - 32px); overflow-y: auto; overscroll-behavior: contain; }
+.sheet-shell { padding: 12px 16px max(20px, env(safe-area-inset-bottom), var(--toss-safe-bottom, 0px)); }
+.village-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.card-art { aspect-ratio: 1.35; }
+.card-art img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.card-body { padding: 13px 16px; }
+.card-body strong { font-size: 16px; }
+.card-body small { display: block; font-size: 11px; line-height: 1.6; color: #775c38; }
+#app[data-village="aurora-lake"] .aurora { opacity: .6; }
+#app[data-village="aurora-lake"].ambient-paused .aurora { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { #app[data-village="aurora-lake"] .aurora { animation: none; } }

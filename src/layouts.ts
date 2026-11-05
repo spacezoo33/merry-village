@@ -30,8 +30,8 @@ const base = object("base", 0, 528, 1000, 1);
 const pine = (x: number, y: number, w: number, z: number) =>
   object("pine", x, y, w, z);
 const tree = object("tree", 250, 168, 480, 700);
-export function villageObjects(id: VillageId): SceneObject[] {
-  const layouts: Record<VillageId, SceneObject[]> = {
+export function villageObjects(id: VillageId | "workshop"): SceneObject[] {
+  const layouts: Record<string, SceneObject[]> = {
     cozy: [
       object("church", 530, 120, 330, 578),
       object("cottage", 100, 300, 340, 640),
@@ -95,5 +95,5 @@ export function villageObjects(id: VillageId): SceneObject[] {
       pine(30, 600, 190, 850),
     ],
   };
-  return [base, ...layouts[id]].sort((a, b) => a.depth - b.depth);
+  return [base, ...(layouts[id] ?? layouts.palace!)].sort((a, b) => a.depth - b.depth);
 }

@@ -147,3 +147,20 @@ export async function subscribeSheetBack(
     return () => {};
   }
 }
+
+/** Installed SDK 3.9.0 SafeArea API; CSS env() remains the browser fallback. */
+export async function bindSafeArea(root: HTMLElement): Promise<() => void> {
+  if (import.meta.env.DEV) return () => {};
+  try {
+    const sdk = await import("@apps-in-toss/web-framework");
+    if (sdk.Environment.environment !== "toss") return () => {};
+    const apply = (insets: { top: number; bottom: number; left: number; right: number }) => {
+      for (const side of ["top", "bottom", "left", "right"] as const) {
+        const value = insets[side];
+        if (Number.isFinite(value)) root.style.setProperty(`--toss-safe-${side}`, `${Math.max(0, value)}px`);
+      }
+    };
+    apply(sdk.SafeArea.get());
+    return sdk.SafeArea.subscribe({ onEvent: apply });
+  } catch { return () => {}; }
+}

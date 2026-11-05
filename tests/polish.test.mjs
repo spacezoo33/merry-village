@@ -14,10 +14,10 @@ test("lighting has four modes, defaults gentle, and never cycles OFF", () => {
   }
   assert.deepEqual(ids, ["all", "alternate", "random", "gentle", "all"]);
 });
-test("74 larger snowflakes degrade after sustained frame pressure and recover without flapping", () => {
+test("111 fine snowflakes degrade after sustained frame pressure and recover without flapping", () => {
   assert.equal(
     Object.values(SNOW_COUNTS.high).reduce((a, b) => a + b),
-    74,
+    111,
   );
   const b = new SnowBudget();
   for (let i = 0; i < 210; i++) b.sample(16.7);
@@ -57,7 +57,7 @@ test("all five independent carols produce finite non-silent music without an ext
   );
 });
 
-test("every village controls lamps only; windows and tunnel mouths have no modulation overlay", async () => {
+test("every village controls exterior lights; windows and tunnel mouths have no modulation overlay", async () => {
   const { architecturalBulbs, decorBulbs } = await import(
     "../src/decor-lights.ts"
   );
@@ -67,7 +67,10 @@ test("every village controls lamps only; windows and tunnel mouths have no modul
     const bulbs = architecturalBulbs(id);
     assert.ok(bulbs.filter((b) => b.kind === "lamp").length >= 4);
     assert.ok(!bulbs.some((b) => b.kind === "window"));
-    assert.deepEqual(decorBulbs(id), []);
+    const { inPortal } = await import("../src/tunnel.ts");
+    assert.ok(!decorBulbs(id).some(b => inPortal(id, b.x, b.y)), "no tunnel lights");
+    if (id === "cozy" || id === "forest" || id === "chapel") assert.deepEqual(decorBulbs(id), []);
+    else assert.ok(decorBulbs(id).length >= 10);
     for (const b of [...bulbs, ...decorBulbs(id)]) {
       assert.ok(b.x > 0 && b.x < 512 && b.y > 0 && b.y < 505);
       assert.equal(
@@ -114,7 +117,7 @@ test("extra glare attacks quickly and fades to zero without changing the four so
   }
 });
 
-test("powder snow shrinks every depth by 45% while preserving the 74-particle budget", async () => {
+test("powder snow shrinks every depth by 45% while preserving the 111-particle budget", async () => {
   const { snowSize, snowLayer } = await import("../src/snow.ts");
   for (const [depth, base] of [["back", 2], ["mid", 4], ["front", 7]]) {
     for (let i = 0; i < 3; i++) assert.equal(snowSize(depth, i), (base + i) * 1.75 * .55);

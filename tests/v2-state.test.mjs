@@ -10,13 +10,15 @@ import {
   hasPass,
   reconcileAccess,
   validPass,
+  canUseVillage,
+  grantVillagePass,
 } from "../src/state.ts";
 import { watchReward } from "../src/ad-session.ts";
 
-test("legacy layouts remain recoverable; catalog provides three free and three special villages with distinct carols", () => {
+test("legacy layouts remain recoverable; catalog provides three free and four special villages with distinct carols", () => {
   assert.equal(VILLAGES.filter((v) => !v.premium).length, 3);
-  assert.equal(VILLAGES.filter((v) => v.premium).length, 3);
-  const layouts = VILLAGES.map((v) => villageObjects(v.id));
+  assert.equal(VILLAGES.filter((v) => v.premium).length, 4);
+  const layouts = ["cozy", "forest", "chapel", "workshop", "palace", "gingerbread"].map(villageObjects);
   assert.equal(new Set(layouts.map((l) => JSON.stringify(l))).size, 6);
   for (const layout of layouts) {
     assert.equal(layout[0].asset, "base");
@@ -75,7 +77,7 @@ test("only earned rewards issue an exact seven-day receipt; expiry revokes premi
   assert.equal(hasPass(pass, now + PASS_MS), false);
   assert.equal(hasPass(pass, now - 1), false);
   assert.equal(validPass({ ...pass, expiresAt: now + PASS_MS + 1 }), null);
-  const p = { ...defaults(), village: "palace", effect: "aurora", pass };
+  const p = { ...defaults(), village: "palace", effect: "aurora", pass, villagePasses: { palace: pass } };
   assert.equal(reconcileAccess(p, now + 1), false);
   assert.equal(reconcileAccess(p, now + PASS_MS), true);
   assert.equal(p.village, "cozy");
@@ -187,4 +189,36 @@ test("removed song IDs and old lighting OFF state migrate without restoring remo
   const state = parsePreferences('{"lights":false,"lightPattern":"gentle"}');
   assert.equal(state.lights, undefined);
   assert.equal(state.lightPattern, "gentle");
+});
+
+
+test("four village rewards are independent, cannot stack, and never unlock nights", () => {
+  const p = defaults(), now = 1800000000000;
+  const ids = VILLAGES.filter(v => v.premium).map(v => v.id);
+  assert.deepEqual(ids, ["palace", "gingerbread", "aurora-lake", "observatory"]);
+  for (const id of ids) assert.equal(canUseVillage(p, id, now), false);
+  assert.equal(grantVillagePass(p, "palace", now, false), false);
+  assert.deepEqual(p.villagePasses, {});
+  assert.equal(grantVillagePass(p, "palace", now, true), true);
+  assert.equal(canUseVillage(p, "gingerbread", now), false);
+  assert.equal(hasPass(p.pass, now), false);
+  const expiry = p.villagePasses.palace.expiresAt;
+  assert.equal(grantVillagePass(p, "palace", now + 1, true), false);
+  assert.equal(p.villagePasses.palace.expiresAt, expiry);
+  for (const id of ids.slice(1)) assert.equal(grantVillagePass(p, id, now + 1000, true), true);
+  assert.equal(canUseVillage(p, "palace", now + PASS_MS), false);
+  assert.equal(canUseVillage(p, "gingerbread", now + PASS_MS), true);
+  p.village = "palace";
+  p.pass = passForReward(now + 1000, true); p.effect = "aurora";
+  reconcileAccess(p, now + PASS_MS);
+  assert.equal(p.village, "cozy"); assert.equal(p.effect, "aurora");
+  const restored = parsePreferences(JSON.stringify(p));
+  assert.deepEqual(restored.villagePasses, p.villagePasses);
+});
+test("legacy global pass and repeat OFF migrate without granting four village rewards", () => {
+  const now = 1800000000000;
+  const p = parsePreferences(JSON.stringify({ village: "workshop", repeat: false, pass: passForReward(now, true) }));
+  assert.equal(p.village, "cozy"); assert.equal(p.repeat, true);
+  for (const v of VILLAGES.filter(v => v.premium)) assert.equal(canUseVillage(p, v.id, now), false);
+  assert.equal(hasPass(p.pass, now), true);
 });

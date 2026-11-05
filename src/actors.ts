@@ -200,10 +200,12 @@ export class Actors {
   };
   private buildTree() {
     const tree = this.tree;
-    tree.position.set(0, this.calibration.treeY, 0);
+    tree.position.set((((this.calibration.treeX ?? this.calibration.front[0]) / 512) * this.calibration.spanX) + this.calibration.left, this.calibration.treeY, 0);
+    tree.scale.setScalar(this.calibration.treeScale ?? 1);
     this.world.add(tree);
     const shadow = contactShadow(0.66, 0.38, 0.28);
-    shadow.position.set(0.025, this.calibration.treeY - 0.049, 0.02);
+    shadow.position.copy(tree.position).add(new T.Vector3(.025 * tree.scale.x, -.049, .02));
+    shadow.scale.setScalar(tree.scale.x);
     this.world.add(shadow);
     mesh(
       new T.CylinderGeometry(0.045, 0.06, 0.18, 12),
@@ -539,7 +541,8 @@ export class Actors {
     this.previous = now;
     if (this.settings.motion) this.elapsed += dt;
     this.lightTime += dt;
-    if (now - this.lastDraw > 32) {
+    const quality = this.host.closest<HTMLElement>("#app")?.dataset.snowQuality ?? "high";
+    if (now - this.lastDraw > (quality === "high" ? 15 : 32)) {
       this.draw();
       this.lastDraw = now;
     }
@@ -626,7 +629,7 @@ export class Actors {
         parseFloat(bulb.style.left) / 100,
       );
       bulb.querySelector<HTMLElement>(".bulb-flare")!.style.opacity =
-        String(level);
+        String(level * Number(bulb.dataset.strength ?? 1));
       bulb.style.setProperty("--intensity", String(level));
     }
     if (

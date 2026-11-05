@@ -1,7 +1,7 @@
 export const SNOW_COUNTS = {
-  high: { back: 24, mid: 28, front: 22 },
-  medium: { back: 18, mid: 22, front: 16 },
-  low: { back: 14, mid: 18, front: 12 },
+  high: { back: 36, mid: 42, front: 33 },
+  medium: { back: 27, mid: 33, front: 24 },
+  low: { back: 21, mid: 27, front: 18 },
 } as const;
 export const SNOW_SIZE_SCALE = .55;
 export function snowSize(depth: "back" | "mid" | "front", index: number) {

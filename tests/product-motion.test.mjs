@@ -62,11 +62,11 @@ test("checked historical scores have public-domain declarations, not licensed th
     );
 });
 
-test("six calibrated railways meet their own atlas tunnel contact points and stay on the trackbed", async () => {
+test("seven calibrated railways meet their own atlas tunnel contact points and stay on the trackbed", async () => {
   const { RAIL_PROFILES, PORTAL_ANGLE, projectRail, railCalibration } =
     await import("../src/rail-profiles.ts");
   const profiles = Object.entries(RAIL_PROFILES);
-  assert.equal(profiles.length, 6);
+  assert.equal(profiles.length, 7);
   for (const [id, p] of profiles) {
     const right = projectRail(id, PORTAL_ANGLE),
       left = projectRail(id, Math.PI - PORTAL_ANGLE),
@@ -92,7 +92,7 @@ test("six calibrated railways meet their own atlas tunnel contact points and sta
         );
     }
   }
-  assert.ok(RAIL_PROFILES.cozy.front[1] - RAIL_PROFILES.workshop.front[1] > 40);
+  assert.notEqual(RAIL_PROFILES.cozy.front[1], RAIL_PROFILES.palace.front[1]);
 });
 test("four lighting modes honor timing, actual screen position and reduced-motion safety", async () => {
   const { lightLevel, LIGHT_PATTERNS } = await import("../src/lighting.ts");

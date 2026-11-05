@@ -9,3 +9,6 @@ These images were generated for this project with OpenAI image generation using 
 Photos composite the same product plate with a real current 3D framebuffer snapshot. Building windows and lantern illumination baked into the plates cannot be fully switched off; live decorative glow layers can. Fully independent architectural relighting would require unlit model/material assets.
 
 - `fir-sprig.png`: new 1280×1280 alpha texture generated for this project (source `exec-98cdabc8-e3e8-4d6b-9315-473b9bb814c8.png`). Repeated on crossed needle cards distributed in 3D space, not a single tree poster. No external image host or copied product image is shipped. Existing architecture atlas/background and all original images remain untouched.
+
+
+특별 4종 생성 출처와 최적화 WebP·실제 장면 썸네일은 [통합 기록](../../docs/special-mobile.md)에 기록했습니다. 기존 PNG 원본은 보존하며 앱은 선택한 마을 이미지와 정적 카드 썸네일만 사용합니다.

@@ -12,6 +12,9 @@ export type RailProfile = {
   treeFoot: number;
   scale: number;
   lap: number;
+  treeX?: number;
+  treeScale?: number;
+  portalCentres?: [[number, number], [number, number]];
 };
 export const RAIL_PROFILES: Record<VillageId, RailProfile> = {
   cozy: {
@@ -41,33 +44,10 @@ export const RAIL_PROFILES: Record<VillageId, RailProfile> = {
     scale: 1,
     lap: TRAIN_LAP_SECONDS,
   },
-  workshop: {
-    left: [130, 300],
-    right: [390, 300],
-    front: [260, 335],
-    height: 505,
-    treeFoot: 245,
-    scale: 0.98,
-    lap: TRAIN_LAP_SECONDS,
-  },
-  palace: {
-    left: [128, 298],
-    right: [388, 298],
-    front: [258, 333],
-    height: 505,
-    treeFoot: 243,
-    scale: 0.98,
-    lap: TRAIN_LAP_SECONDS,
-  },
-  gingerbread: {
-    left: [126, 300],
-    right: [388, 300],
-    front: [257, 335],
-    height: 505,
-    treeFoot: 245,
-    scale: 0.98,
-    lap: TRAIN_LAP_SECONDS,
-  },
+  "palace": { left: [113, 327], right: [397, 327], front: [256, 362], height: 512, treeFoot: 275, scale: .98, lap: TRAIN_LAP_SECONDS, treeX: 325, treeScale: .72, portalCentres: [[110, 302], [402, 302]] },
+  "gingerbread": { left: [111, 327], right: [398, 327], front: [256, 365], height: 512, treeFoot: 282, scale: .98, lap: TRAIN_LAP_SECONDS, treeX: 256, treeScale: 0.8, portalCentres: [[110, 302], [402, 302]] },
+  "aurora-lake": { left: [111, 327], right: [398, 327], front: [256, 364], height: 512, treeFoot: 292, scale: .98, lap: TRAIN_LAP_SECONDS, treeX: 256, treeScale: 0.68, portalCentres: [[110, 302], [402, 302]] },
+  "observatory": { left: [112, 327], right: [397, 327], front: [256, 364], height: 512, treeFoot: 286, scale: .98, lap: TRAIN_LAP_SECONDS, treeX: 245, treeScale: 0.76, portalCentres: [[110, 302], [402, 302]] },
 };
 export const PORTAL_ANGLE = 0.6;
 export function railCalibration(id: VillageId) {

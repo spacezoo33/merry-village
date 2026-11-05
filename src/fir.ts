@@ -1,6 +1,6 @@
 import { snowMaterial } from "./surface";
 import * as T from "three";
-import firUrl from "./assets/fir-sprig.png";
+import firUrl from "./assets/fir-sprig.webp";
 /** Crossed needle cards are distributed in real 3D space, not a rotating tree photograph. */
 export function addFirBranches(tree: T.Group) {
   let resolve!: () => void, reject!: (error: unknown) => void;

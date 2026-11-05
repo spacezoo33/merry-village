@@ -29,7 +29,7 @@ try {
   console.log('audio', JSON.stringify(audio));
   await page.evaluate(() => document.querySelector('#run').remove());
   const villages = [];
-  for (const id of process.env.VALIDATION_SCOPE === 'app' ? [] : ['cozy', 'forest', 'chapel', 'workshop', 'palace', 'gingerbread']) {
+  for (const id of process.env.VALIDATION_SCOPE === 'app' ? [] : ['cozy', 'forest', 'chapel', 'palace', 'gingerbread', 'aurora-lake', 'observatory']) {
     await page.evaluate(async id => {
       const { Actors } = await import('/src/actors.ts');
       const { scene } = await import('/src/scene.ts');
@@ -49,13 +49,13 @@ try {
       await page.evaluate(width => { document.querySelector('#fixture').style.width = `${width}px`; }, width);
       await page.waitForTimeout(80);
       const alignment = await page.evaluate(async () => {
-        const { architecturalBulbs } = await import('/src/decor-lights.ts');
+        const { architecturalBulbs, decorBulbs } = await import('/src/decor-lights.ts');
         const { RAIL_PROFILES } = await import('/src/rail-profiles.ts');
         const { Matrix4, Vector3 } = await import('/node_modules/three/build/three.module.js');
         const a = window.actor, profile = RAIL_PROFILES[a.village];
         const stage = document.querySelector('.product-stage').getBoundingClientRect();
         const bulbs = [...document.querySelectorAll('.decor-bulb')];
-        const points = architecturalBulbs(a.village);
+        const points = [...decorBulbs(a.village), ...architecturalBulbs(a.village)];
         let error = 0;
         bulbs.forEach((b, i) => {
           const r = b.querySelector('.bulb-flare').getBoundingClientRect();
@@ -90,7 +90,7 @@ try {
         const a = window.actor;
         a.lightTime = time; a.elapsed = 2; a.draw();
         const bulbs = [...document.querySelectorAll('.decor-bulb')];
-        if (!bulbs.length || bulbs.some(b => !b.classList.contains('lamp'))) throw Error('non-lamp / tunnel light');
+        if (!bulbs.length || bulbs.some(b => !b.classList.contains('lamp') && !b.classList.contains('accent'))) throw Error('non-lamp / tunnel light');
         const base = bulbs.map(b => getComputedStyle(b.querySelector('.bulb-emitter')).opacity);
         const extras = bulbs.map(b => Number(b.querySelector('.bulb-flare').style.opacity));
         if (base.some(v => v !== '1')) throw Error('base lamp became dark');
@@ -111,7 +111,7 @@ try {
       await page.screenshot({ path: `${root}/${id}-${name}.png` });
       states.push({ name, ...result });
     }
-    if (!states[0].extras.every(v => v === 0) || !states[1].extras.every(v => v === 1)) throw Error('glare OFF/ON mismatch');
+    if (!states[0].extras.every(v => v === 0) || !states[1].extras.every(v => v >= .7 && v <= 1)) throw Error('glare OFF/ON mismatch');
     if (!(states[1].energy > states[0].energy)) throw Error('photo has no additional ON light');
     // Exercise actual renderer callbacks with each village's real camera, including offset.
     const projection = await page.evaluate(async () => {

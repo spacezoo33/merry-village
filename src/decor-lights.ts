@@ -6,9 +6,11 @@ export type DecorBulb = {
   x: number;
   y: number;
   color: string;
-  kind?: "lamp";
+  kind?: "lamp" | "accent";
   w?: number;
   h?: number;
+  radius?: number;
+  strength?: number;
 };
 // Bulb centres measured separately in each original atlas cell; bottom cells start at y=519.
 // Forest roof window is excluded; palace includes the two inner standing lamps.
@@ -90,82 +92,10 @@ export const ARCHITECTURE: Record<
       [414, 208, 6, 11],
     ],
   },
-  workshop: {
-    lamps: [
-      [62, 163],
-      [76, 219],
-      [460, 166],
-      [446, 221],
-      [122, 319],
-      [396, 319],
-    ],
-    windows: [
-      [110, 160, 6, 12],
-      [152, 137, 7, 12],
-      [159, 168, 7, 12],
-      [185, 169, 6, 12],
-      [244, 179, 9, 16],
-      [243, 107, 11, 14],
-      [294, 161, 7, 12],
-      [336, 162, 8, 13],
-      [335, 179, 8, 14],
-      [398, 156, 7, 12],
-      [400, 183, 8, 12],
-    ],
-  },
-  palace: {
-    lamps: [
-      [62, 164],
-      [78, 218],
-      [450, 164],
-      [440, 218],
-      [164, 167],
-      [351, 167],
-    ],
-    windows: [
-      [108, 156, 6, 12],
-      [137, 166, 6, 10],
-      [164, 116, 5, 11],
-      [160, 145, 5, 11],
-      [204, 158, 5, 13],
-      [234, 159, 5, 13],
-      [259, 115, 8, 14],
-      [259, 168, 8, 14],
-      [259, 81, 6, 8],
-      [281, 147, 6, 12],
-      [305, 160, 6, 13],
-      [319, 116, 5, 10],
-      [356, 155, 6, 12],
-      [370, 114, 5, 12],
-      [392, 158, 6, 11],
-    ],
-  },
-  gingerbread: {
-    lamps: [
-      [57, 157],
-      [73, 215],
-      [451, 164],
-      [439, 218],
-      [118, 318],
-      [393, 318],
-    ],
-    windows: [
-      [109, 163, 7, 11],
-      [144, 158, 7, 11],
-      [157, 140, 6, 9],
-      [180, 157, 7, 11],
-      [212, 155, 7, 13],
-      [237, 155, 7, 13],
-      [253, 142, 7, 12],
-      [283, 143, 7, 12],
-      [270, 119, 8, 10],
-      [265, 190, 7, 12],
-      [327, 164, 7, 11],
-      [342, 135, 6, 9],
-      [379, 162, 7, 12],
-      [411, 174, 6, 11],
-    ],
-  },
+  "palace": { lamps: [[83, 235], [550, 235], [131, 421], [500, 422], [279, 216], [354, 216]].map(([x, y]) => [x! * 512 / 627, y! * 512 / 627]), windows: [] },
+  "gingerbread": { lamps: [[73, 232], [252, 210], [383, 207], [555, 233], [131, 420], [501, 419]].map(([x, y]) => [x! * 512 / 627, y! * 512 / 627]), windows: [] },
+  "aurora-lake": { lamps: [[130, 422], [500, 422], [274, 159], [305, 153], [335, 149], [380, 159]].map(([x, y]) => [x! * 512 / 627, y! * 512 / 627]), windows: [] },
+  "observatory": { lamps: [[131, 422], [500, 422], [69, 240], [158, 235]].map(([x, y]) => [x! * 512 / 627, y! * 512 / 627]), windows: [] },
 };
 export function architecturalBulbs(id: VillageId): DecorBulb[] {
   return [
@@ -180,14 +110,21 @@ export function architecturalBulbs(id: VillageId): DecorBulb[] {
   ];
 }
 
-/** No synthetic lights in either tunnel, including the former arch garlands. */
-export function decorBulbs(_id: VillageId): DecorBulb[] { return []; }
+/** Exterior decorations only; no points inside either tunnel mouth. */
+const SPECIAL_ACCENTS: Partial<Record<VillageId, number[][]>> = {"palace": [[175, 61], [253, 43], [314, 19], [385, 45], [458, 64], [192, 269], [439, 269], [271, 295], [314, 306], [358, 295], [246, 228], [385, 228]], "gingerbread": [[48, 198], [575, 199], [256, 191], [383, 192], [443, 286], [472, 301], [496, 283], [315, 28], [465, 141], [86, 206], [122, 204], [318, 157], [435, 195], [502, 193]], "aurora-lake": [[127, 122], [440, 53], [267, 246], [384, 246], [290, 168], [353, 167], [46, 278], [580, 276], [95, 443], [538, 442], [307, 175], [336, 175]], "observatory": [[315, 27], [214, 72], [415, 80], [269, 43], [374, 49], [455, 232], [483, 239], [513, 240], [541, 234], [567, 226], [508, 171], [180, 429], [450, 429]]};
+export function decorBulbs(id: VillageId): DecorBulb[] {
+  return (SPECIAL_ACCENTS[id] ?? []).map(([x, y], i) => ({
+    x: x! * 512 / 627, y: y! * 512 / 627, color: "#ffe2a1", kind: "accent",
+    w: i % 3 === 0 ? 3.8 : 2.5, h: i % 3 === 0 ? 3.8 : 2.5,
+    radius: i % 3 === 0 ? 16 : 10, strength: i % 3 === 0 ? .95 : .7,
+  }));
+}
 export function decorMarkup(id: VillageId) {
   const height = RAIL_PROFILES[id].height;
   return [...decorBulbs(id), ...architecturalBulbs(id)]
     .map(
       (p) =>
-        `<i class="decor-bulb ${p.kind ?? "garland"}" style="--light-w:${((p.w ?? 2.56) / 512) * 100}%;--light-h:${((p.h ?? 2.56) / height) * 100}%;left:${(p.x / 512) * 100}%;top:${(p.y / height) * 100}%;--bulb-color:${p.color}"><span class="bulb-emitter"></span><span class="bulb-flare"></span></i>`,
+        `<i class="decor-bulb ${p.kind ?? "garland"}" data-strength="${p.strength ?? 1}" style="--light-w:${((p.w ?? 2.56) / 512) * 100}%;--light-h:${((p.h ?? 2.56) / height) * 100}%;left:${(p.x / 512) * 100}%;top:${(p.y / height) * 100}%;--bulb-color:${p.color}"><span class="bulb-emitter"></span><span class="bulb-flare"></span></i>`,
     )
     .join("");
 }
@@ -219,6 +156,6 @@ export function drawDecorLights(
     c.shadowBlur = scale * 2;
     c.beginPath(); c.ellipse(x, y, scale * 1.15, scale * 1.7, 0, 0, Math.PI * 2); c.fill();
     c.restore();
-    drawGoldenGlow(c, x, y, scale * (gold ? 24 : 21), level);
+    drawGoldenGlow(c, x, y, scale * (p.radius ?? (gold ? 24 : 21)), level * (p.strength ?? 1));
   });
 }

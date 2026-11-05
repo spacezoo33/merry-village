@@ -1922,7 +1922,7 @@ html, body { max-width: 100%; overflow-x: clip; }
 #app[data-effect="aurora"] #scene-host::after { background: linear-gradient(135deg, #55bca710, #a07edd13); }
 #app[data-effect="shooting"] #scene-host::after { background: radial-gradient(ellipse, #eeb95010, transparent 75%); }
 #app[data-effect="shooting"] .starfield { opacity: .8; }
-#app[data-effect="shooting"] .decor-bulb .bulb-flare { scale: 1.12; }
+#app[data-effect="shooting"] .decor-bulb .bulb-flare { transform: translate(-50%, -50%) scale(1.12); }
 .sheet-open .night-effects *, .ambient-paused .night-effects * { animation-play-state: paused !important; }
 #app[data-snow-quality="low"] .starfield i:nth-child(n+13) { display: none; }
 #app[data-snow-quality="low"] .aurora { filter: none; }

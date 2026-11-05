@@ -58,6 +58,12 @@ try {
   for(const id of ['moonlight','shooting','aurora']) {
     await p.locator('.bottom-nav [data-action="nights"]').click();await p.locator(`button[data-effect="${id}"]`).click();
     if(await p.locator('#app').getAttribute('data-effect')!==id)throw Error('authorized apply');
+    if (id === 'shooting') await p.evaluate(() => {
+      for (const bulb of document.querySelectorAll('#scene-host .decor-bulb')) {
+        const source = bulb.querySelector('.bulb-emitter').getBoundingClientRect(), flare = bulb.querySelector('.bulb-flare').getBoundingClientRect();
+        if (Math.hypot(source.x + source.width / 2 - flare.x - flare.width / 2, source.y + source.height / 2 - flare.y - flare.height / 2) > .1) throw Error('gold flare centre moved');
+      }
+    });
     await p.screenshot({path:`${out}/${id}-active.png`});
     await p.locator('.bottom-nav [data-action="villages"]').click();await p.locator('.village-card[data-village="forest"]').click();
     if(await p.locator('#app').getAttribute('data-effect')!==id)throw Error('village cleared theme');

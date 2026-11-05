@@ -1,4 +1,4 @@
-import { SNOW_COUNTS, type SnowQuality } from "./snow";
+import { SNOW_COUNTS, snowSize, type SnowQuality } from "./snow";
 import { drawDecorLights } from "./decor-lights";
 import { type LightPattern } from "./lighting";
 import background from "./assets/christmas-room.png";
@@ -70,10 +70,7 @@ export async function captureVillage(
     for (let i = 0; i < counts[depth]; i++) {
       const x = (i * 197 + (depth === "front" ? 113 : 31)) % 1200,
         y = (i * 137 + 41 + (depth === "mid" ? 173 : 0)) % 1560;
-      const radius =
-        ((((depth === "back" ? 2 : depth === "mid" ? 4 : 7) + (i % 3)) * 1.75) /
-          2) *
-        pixelScale;
+      const radius = snowSize(depth, i) / 2 * pixelScale;
       const g = c.createRadialGradient(x, y, 0, x, y, radius);
       g.addColorStop(0, depth === "back" ? "#fff9ed88" : "#fffbedcc");
       g.addColorStop(0.5, "#fff9ec77");

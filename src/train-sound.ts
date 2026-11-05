@@ -2,6 +2,7 @@ import {
   CHUFF_SECONDS,
   chuffOffset,
   TRAIN_LAP_SECONDS,
+  WHISTLE_EVERY_LAPS,
 } from "./train-timing.ts";
 import { scheduleSteamWhistle, WHISTLE_SECONDS } from "./steam-whistle.ts";
 import { audioContext, audioStem, duckAccompaniment, releaseAccompaniment } from "./audio-engine.ts";
@@ -111,11 +112,11 @@ export class TrainSound {
     x: number,
     visible: boolean,
     village: string,
+    lap: number,
   ) {
     if (village !== this.village) {
       this.village = village;
       this.previousPosition = null;
-      this.lastPass = -1;
     }
     if (!this.wanted || !this.loop || this.context?.state !== "running") {
       this.previousPosition = null;
@@ -129,11 +130,12 @@ export class TrainSound {
       journey - previous.journey > TRAIN_LAP_SECONDS / 2
     )
       return;
-    const pass = Math.floor(Math.max(0, journey - 0.65) / TRAIN_LAP_SECONDS);
+    const pass = lap;
     if (
       visible && previous.visible &&
       previous.x > 0.5 && x <= 0.5 &&
-      pass !== this.lastPass
+      Number.isInteger(pass) && pass > 0 &&
+      pass % WHISTLE_EVERY_LAPS === 0 && pass !== this.lastPass
     ) {
       this.lastPass = pass;
       this.horn(this.context.currentTime);

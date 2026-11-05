@@ -1,5 +1,6 @@
 /** Shared device with separately metered stems and a final gentle headroom limiter. */
 export const STEM_NAMES = ["music", "train", "horn"] as const;
+export const STEM_GAIN = { music: 1, train: .75, horn: .7 } as const;
 export type AudioStem = (typeof STEM_NAMES)[number];
 let shared: AudioContext | null = null;
 let bus: {
@@ -30,6 +31,7 @@ export function createAudioBus(c: BaseAudioContext) {
   for (const name of STEM_NAMES) {
     const input = c.createGain(),
       meter = c.createAnalyser();
+    input.gain.value = STEM_GAIN[name];
     meter.fftSize = 2048;
     input.connect(meter);
     meter.connect(output);
@@ -79,10 +81,10 @@ export function duckForWhistle(inputs: Record<AudioStem, GainNode>, at: number, 
   for (const [name, level] of [["music", .28], ["train", .38]] as const) {
     const gain = inputs[name].gain;
     gain.cancelScheduledValues(at);
-    gain.setValueAtTime(1, at);
-    gain.linearRampToValueAtTime(level, at + .04);
-    gain.setValueAtTime(level, at + duration);
-    gain.linearRampToValueAtTime(1, at + duration + .3);
+    gain.setValueAtTime(STEM_GAIN[name], at);
+    gain.linearRampToValueAtTime(STEM_GAIN[name] * level, at + .04);
+    gain.setValueAtTime(STEM_GAIN[name] * level, at + duration);
+    gain.linearRampToValueAtTime(STEM_GAIN[name], at + duration + .3);
   }
 }
 export function duckAccompaniment(duration: number) {
@@ -95,6 +97,6 @@ export function releaseAccompaniment() {
   for (const name of ["music", "train"] as const) {
     const gain = bus.inputs[name].gain;
     gain.cancelScheduledValues(shared.currentTime);
-    gain.setTargetAtTime(1, shared.currentTime, .06);
+    gain.setTargetAtTime(STEM_GAIN[name], shared.currentTime, .06);
   }
 }

@@ -113,3 +113,13 @@ test("extra glare attacks quickly and fades to zero without changing the four so
     assert.equal(extraLightLevel(id, 2, 0, true), .35);
   }
 });
+
+test("powder snow shrinks every depth by 45% while preserving the 74-particle budget", async () => {
+  const { snowSize, snowLayer } = await import("../src/snow.ts");
+  for (const [depth, base] of [["back", 2], ["mid", 4], ["front", 7]]) {
+    for (let i = 0; i < 3; i++) assert.equal(snowSize(depth, i), (base + i) * 1.75 * .55);
+    assert.equal((snowLayer(depth).match(/<i /g) ?? []).length, SNOW_COUNTS.high[depth]);
+  }
+  assert.ok(snowSize("front", 0) > snowSize("mid", 0));
+  assert.ok(snowSize("mid", 0) > snowSize("back", 0));
+});

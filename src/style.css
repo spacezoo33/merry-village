@@ -1767,7 +1767,7 @@ h1 span {
 }
 .snow-back {
   opacity: 0.5;
-  filter: blur(1px);
+  filter: blur(0.35px);
 }
 .snow-mid {
   opacity: 0.75;

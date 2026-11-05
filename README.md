@@ -79,3 +79,5 @@ npm run preview
 실제 토스 기기 테스트, 콘솔 업로드, 최신 GitHub Actions 결과, Pages 배포는 별도 확인 사항입니다. [SDK 에셋 설명](src/assets/README.md)과 공식 문서 https://developers-apps-in-toss.toss.im/ 을 참고하세요.
 
 조명 기본광/추가광 분리와 실제 Web Audio 출력 측정은 [검증 기록](docs/lighting-audio-validation.md)을 참고하세요.
+
+최신 주행음 gain·6바퀴 기적 주기·작은 눈송이·빌리지별 조명 좌표는 [변경 및 검증 기록](docs/sound-snow-alignment.md)을 참고하세요.

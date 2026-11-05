@@ -19,17 +19,17 @@ try {
     body: '<link rel="stylesheet" href="/src/style.css"><body style="margin:0;background:#28190b"><button id="run">Audio test</button><div id="app" class="night" data-effect="none"><div id="fixture" style="width:430px"></div></div>',
   }));
   await page.goto(`${base}/__validation`);
-  await page.evaluate(async () => {
+  if (process.env.VALIDATION_SCOPE !== "app") await page.evaluate(async () => {
     const audio = await import('/tests/browser/audio-output.ts');
     window.offline = await audio.measureOfflineAudio();
     document.querySelector('#run').onclick = () => { window.live = audio.measureLiveAudio(); };
   });
-  await page.click('#run');
-  const audio = await page.evaluate(async () => ({ offline: window.offline, live: await window.live }));
+  if (process.env.VALIDATION_SCOPE !== 'app') await page.click('#run');
+  const audio = process.env.VALIDATION_SCOPE === "app" ? null : await page.evaluate(async () => ({ offline: window.offline, live: await window.live }));
   console.log('audio', JSON.stringify(audio));
   await page.evaluate(() => document.querySelector('#run').remove());
   const villages = [];
-  for (const id of ['cozy', 'forest', 'chapel', 'workshop', 'palace', 'gingerbread']) {
+  for (const id of process.env.VALIDATION_SCOPE === 'app' ? [] : ['cozy', 'forest', 'chapel', 'workshop', 'palace', 'gingerbread']) {
     await page.evaluate(async id => {
       const { Actors } = await import('/src/actors.ts');
       const { scene } = await import('/src/scene.ts');
@@ -43,6 +43,47 @@ try {
     }, id);
     // Allow the ResizeObserver to size the renderer before deterministic snapshots.
     await page.waitForTimeout(60);
+    const responsive = [];
+    for (const width of [320, 375, 430]) {
+      await page.setViewportSize({ width, height: 520 });
+      await page.evaluate(width => { document.querySelector('#fixture').style.width = `${width}px`; }, width);
+      await page.waitForTimeout(80);
+      const alignment = await page.evaluate(async () => {
+        const { architecturalBulbs } = await import('/src/decor-lights.ts');
+        const { RAIL_PROFILES } = await import('/src/rail-profiles.ts');
+        const { Matrix4, Vector3 } = await import('/node_modules/three/build/three.module.js');
+        const a = window.actor, profile = RAIL_PROFILES[a.village];
+        const stage = document.querySelector('.product-stage').getBoundingClientRect();
+        const bulbs = [...document.querySelectorAll('.decor-bulb')];
+        const points = architecturalBulbs(a.village);
+        let error = 0;
+        bulbs.forEach((b, i) => {
+          const r = b.querySelector('.bulb-flare').getBoundingClientRect();
+          error = Math.max(error, Math.abs((r.x + r.width / 2 - stage.x) - points[i].x / 512 * stage.width),
+            Math.abs((r.y + r.height / 2 - stage.y) - points[i].y / profile.height * stage.height));
+        });
+        const star = a.tree.children.find(o => o.material === a.bulbs[0].material);
+        for (const elapsed of [0, 9, 19, 31]) {
+          a.elapsed = elapsed; a.draw(); a.tree.updateMatrixWorld(true);
+          const centre = star.localToWorld(new Vector3(0, 0, .0125));
+          const glow = a.starGlow.getWorldPosition(new Vector3());
+          if (centre.distanceTo(glow) > 1e-9) throw Error('rotating star glare offset');
+          for (let i = 0; i < 75; i++) {
+            const matrix = new Matrix4(); a.diodeBodies.getMatrixAt(i, matrix);
+            const body = new Vector3().setFromMatrixPosition(matrix).applyMatrix4(a.tree.matrixWorld);
+            const glow = new Vector3().fromArray(a.ledPositions, i * 3).applyMatrix4(a.tree.matrixWorld);
+            if (body.distanceTo(glow) > 1e-7) throw Error('rotating LED glare offset');
+          }
+        }
+        if (error > .1 || bulbs.length !== points.length) throw Error(`lamp alignment ${error}`);
+        return { lamps: bulbs.length, maxPixelError: error };
+      });
+      for (const [state, time] of [['off', 1.5], ['on', .5]]) {
+        await page.evaluate(time => { window.actor.lightTime = time; window.actor.draw(); }, time);
+        await page.screenshot({ path: `${root}/${id}-${width}-${state}.png` });
+      }
+      responsive.push({ width, ...alignment });
+    }
     const states = [];
     for (const [name, time] of [['off', 1.5], ['on', .5]]) {
       const result = await page.evaluate(async ({ time }) => {
@@ -93,7 +134,7 @@ try {
       if (visibleCrossings !== 3 || maxError > 1e-8) throw Error(`camera crossing mismatch ${visibleCrossings}/${maxError}`);
       return { visibleCrossings, maxError };
     });
-    villages.push({ id, states, projection });
+    villages.push({ id, states, projection, responsive });
     console.log('village', id, JSON.stringify(projection));
   }
   if (errors.length) throw Error(JSON.stringify(errors));
@@ -106,8 +147,29 @@ try {
     const { measureAppAudio } = await import('/tests/browser/audio-output.ts');
     return measureAppAudio();
   });
+  const beforeSwitch = Number(await appPage.locator('#scene-host .actor-stage').getAttribute('data-elapsed'));
+  await appPage.locator('[data-action="villages"]').click();
+  await appPage.locator('[data-village="forest"]').click();
+  await appPage.locator('.actor-stage[data-ready="true"]').waitFor();
+  const afterSwitch = Number(await appPage.locator('#scene-host .actor-stage').getAttribute('data-elapsed'));
+  if (afterSwitch < beforeSwitch) throw Error('village switch reset journey');
+  if (await appPage.locator('#sheet').evaluate(d => d.open)) await appPage.locator('[data-action="close"]').click();
+  await appPage.locator('#motion-toggle').click();
+  await appPage.waitForTimeout(100);
+  const stopped = await appPage.locator('#scene-host .actor-stage').getAttribute('data-elapsed');
+  await appPage.waitForTimeout(300);
+  if (await appPage.locator('#scene-host .actor-stage').getAttribute('data-elapsed') !== stopped) throw Error('OFF advanced journey');
+  await appPage.locator('#motion-toggle').click();
+  await appPage.waitForTimeout(200);
+  if (Number(await appPage.locator('#scene-host .actor-stage').getAttribute('data-elapsed')) < Number(stopped)) throw Error('resume reset journey');
+  await appPage.locator('#snow-toggle').click();
+  if (!await appPage.locator('#app').evaluate(a => a.classList.contains('snow-off'))) throw Error('snow OFF failed');
+  await appPage.locator('#snow-toggle').click();
+  if (await appPage.locator('#app').evaluate(a => a.classList.contains('snow-off'))) throw Error('snow ON failed');
+  if (await appPage.locator('.hero .decor-bulb').count() !== 6) throw Error('old village lights remained');
+  mainApp.switchProgress = { beforeSwitch, afterSwitch, stopped };
   if (errors.length) throw Error(JSON.stringify(errors));
   const results = { audio, mainApp, villages, errors };
   await writeFile(`${root}/results.json`, JSON.stringify(results, null, 2));
-  console.log(`PASS: audio output, six villages, twelve ON/OFF PNG photos; ${root}/results.json`);
+  console.log(`PASS: requested browser checks; ${root}/results.json`);
 } finally { await browser.close(); }

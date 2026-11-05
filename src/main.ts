@@ -196,6 +196,7 @@ function updateMusic(): void {
 function render(): void {
   const current = display();
   if (renderedVillage !== current.village) {
+    const journey = actors?.journeyTime ?? 0;
     trainSound.setRunning(false);
     actors?.destroy();
     app.querySelector("#scene-host")!.innerHTML = scene(current.village);
@@ -203,8 +204,9 @@ function render(): void {
       actors = new Actors(
         app.querySelector<HTMLElement>("#scene-host .actor-stage")!,
         current.village,
-        (journey, x, visible) =>
-          trainSound.updatePosition(journey, x, visible, current.village),
+        (journey, x, visible, lap) =>
+          trainSound.updatePosition(journey, x, visible, current.village, lap),
+        journey,
       );
       app.querySelector("#graphics-status")!.textContent = "";
     } catch {

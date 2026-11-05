@@ -3,10 +3,14 @@ export const SNOW_COUNTS = {
   medium: { back: 18, mid: 22, front: 16 },
   low: { back: 14, mid: 18, front: 12 },
 } as const;
+export const SNOW_SIZE_SCALE = .55;
+export function snowSize(depth: "back" | "mid" | "front", index: number) {
+  return ((depth === "back" ? 2 : depth === "mid" ? 4 : 7) + index % 3) * 1.75 * SNOW_SIZE_SCALE;
+}
 export type SnowQuality = keyof typeof SNOW_COUNTS;
 export function snowLayer(depth: "back" | "mid" | "front"): string {
   const count = SNOW_COUNTS.high[depth];
-  return `<div class="snowfall snow-${depth}" aria-hidden="true">${Array.from({ length: count }, (_, i) => `<i style="--x:${(i * 37 + (depth === "front" ? 17 : 5)) % 100}%;--y:${(i * 23) % 96}%;--delay:-${i * 0.91}s;--duration:${(depth === "back" ? 21 : depth === "mid" ? 14 : 9) + (i % 7)}s;--size:${((depth === "back" ? 2 : depth === "mid" ? 4 : 7) + (i % 3)) * 1.75}px;--drift:${i % 2 ? 22 : -26}px"></i>`).join("")}</div>`;
+  return `<div class="snowfall snow-${depth}" aria-hidden="true">${Array.from({ length: count }, (_, i) => `<i style="--x:${(i * 37 + (depth === "front" ? 17 : 5)) % 100}%;--y:${(i * 23) % 96}%;--delay:-${i * 0.91}s;--duration:${(depth === "back" ? 21 : depth === "mid" ? 17 : 13) + (i % 7)}s;--size:${snowSize(depth, i)}px;--drift:${i % 2 ? 12 : -14}px"></i>`).join("")}</div>`;
 }
 /** Hysteresis: drop after a sustained 3s budget violation, recover only after 15s. */
 export class SnowBudget {

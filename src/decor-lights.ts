@@ -10,7 +10,8 @@ export type DecorBulb = {
   w?: number;
   h?: number;
 };
-// Coordinates measured in each source atlas cell (bottom cells start at y=519).
+// Bulb centres measured separately in each original atlas cell; bottom cells start at y=519.
+// Forest roof window is excluded; palace includes the two inner standing lamps.
 export const ARCHITECTURE: Record<
   VillageId,
   { lamps: number[][]; windows: number[][] }
@@ -19,11 +20,11 @@ export const ARCHITECTURE: Record<
     lamps: [
       [60, 199],
       [77, 260],
-      [448, 213],
-      [461, 268],
-      [114, 360],
-      [369, 371],
-      [431, 362],
+      [447, 213],
+      [459, 266],
+      [115, 359],
+      [370, 371],
+      [431, 360],
     ],
     windows: [
       [96, 211, 6, 13],
@@ -45,7 +46,6 @@ export const ARCHITECTURE: Record<
     lamps: [
       [57, 206],
       [71, 264],
-      [449, 219],
       [451, 266],
       [122, 362],
       [370, 372],
@@ -70,9 +70,9 @@ export const ARCHITECTURE: Record<
   },
   chapel: {
     lamps: [
-      [53, 206],
+      [54, 207],
       [70, 264],
-      [443, 221],
+      [462, 222],
       [443, 267],
       [117, 363],
       [367, 372],
@@ -93,10 +93,10 @@ export const ARCHITECTURE: Record<
   workshop: {
     lamps: [
       [62, 163],
-      [76, 218],
-      [447, 169],
-      [447, 220],
-      [121, 319],
+      [76, 219],
+      [460, 166],
+      [446, 221],
+      [122, 319],
       [396, 319],
     ],
     windows: [
@@ -116,9 +116,11 @@ export const ARCHITECTURE: Record<
   palace: {
     lamps: [
       [62, 164],
-      [65, 216],
-      [446, 164],
-      [432, 215],
+      [78, 218],
+      [450, 164],
+      [440, 218],
+      [164, 167],
+      [351, 167],
     ],
     windows: [
       [108, 156, 6, 12],
@@ -140,12 +142,12 @@ export const ARCHITECTURE: Record<
   },
   gingerbread: {
     lamps: [
-      [57, 158],
-      [73, 216],
-      [447, 169],
-      [447, 220],
+      [57, 157],
+      [73, 215],
+      [451, 164],
+      [439, 218],
       [118, 318],
-      [393, 319],
+      [393, 318],
     ],
     windows: [
       [109, 163, 7, 11],

@@ -1,3 +1,4 @@
+import { journeyLap } from "./train-timing.ts";
 import { drawGoldenGlow } from "./golden-glow.ts";
 import { tunnelPortals } from "./tunnel";
 import { contactShadow, snowMaterial } from "./surface";
@@ -86,6 +87,7 @@ export class Actors {
     journey: number,
     x: number,
     visible: boolean,
+    lap: number,
   ) => void;
   private ledWeights = new Float32Array(75);
   private ledAttribute = new T.BufferAttribute(this.ledWeights, 1);
@@ -114,8 +116,11 @@ export class Actors {
       journey: number,
       x: number,
       visible: boolean,
+      lap: number,
     ) => void = () => {},
+    initialElapsed = 0,
   ) {
+    this.elapsed = initialElapsed;
     this.onTrainPosition = onTrainPosition;
     this.village = village;
     this.calibration = railCalibration(village);
@@ -383,7 +388,8 @@ export class Actors {
     );
     this.starGlow.renderOrder = 4;
     this.starGlow.position.copy(star.position);
-    this.starGlow.position.z += 0.025;
+    // Extrusion is 0.025 deep: place the glare at its geometric centre.
+    this.starGlow.position.z += .0125;
     this.starGlow.scale.set(0.66, 0.66, 1);
     tree.add(this.starGlow);
     this.starLight = new T.PointLight(0xffc56e, 0.4, 0.8, 2);
@@ -634,6 +640,7 @@ export class Actors {
         this.elapsed,
         (this.projectedLight.x + 1) / 2,
         poses[0]!.z >= this.calibration.tunnelZ,
+        journeyLap(poses[0]!.angle - .85),
       );
     }
     this.renderer.render(this.world, this.camera);
@@ -648,6 +655,7 @@ export class Actors {
     this.host.dataset.village = JSON.stringify(this.calibration);
     this.host.dataset.reduced = String(this.reduced.matches);
   }
+  get journeyTime() { return this.elapsed; }
   get lightingTime() {
     return this.lightTime;
   }

@@ -56,7 +56,7 @@ export async function measureOfflineAudio() {
       results.tail = metrics(data, 3.2 * rate, 3.8 * rate);
     }
   }
-  assert(Math.abs(results.horn!.rms / results["baseline-horn"]!.rms - .7) < .0001, "horn gain must drop 30%");
+  assert(Math.abs(results.horn!.rms / results["baseline-horn"]!.rms - .49) < .0001, "horn gain must be 70% of the preceding .7 setting");
   assert(Math.abs(results.train!.rms / results["baseline-train"]!.rms - .75) < .0001, "train gain must drop 25%");
   const advantageDb = 20 * Math.log10(results.horn!.rms / results.train!.rms);
   assert(advantageDb > 12, "whistle must exceed chuff RMS by 12 dB");

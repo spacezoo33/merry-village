@@ -12,6 +12,8 @@ import {
   validPass,
   canUseVillage,
   grantVillagePass,
+  canUseNight,
+  grantNightPass,
 } from "../src/state.ts";
 import { watchReward } from "../src/ad-session.ts";
 
@@ -77,7 +79,7 @@ test("only earned rewards issue an exact seven-day receipt; expiry revokes premi
   assert.equal(hasPass(pass, now + PASS_MS), false);
   assert.equal(hasPass(pass, now - 1), false);
   assert.equal(validPass({ ...pass, expiresAt: now + PASS_MS + 1 }), null);
-  const p = { ...defaults(), village: "palace", effect: "aurora", pass, villagePasses: { palace: pass } };
+  const p = { ...defaults(), village: "palace", effect: "aurora", pass, nightPasses: { aurora: pass }, villagePasses: { palace: pass } };
   assert.equal(reconcileAccess(p, now + 1), false);
   assert.equal(reconcileAccess(p, now + PASS_MS), true);
   assert.equal(p.village, "cozy");
@@ -209,7 +211,7 @@ test("four village rewards are independent, cannot stack, and never unlock night
   assert.equal(canUseVillage(p, "palace", now + PASS_MS), false);
   assert.equal(canUseVillage(p, "gingerbread", now + PASS_MS), true);
   p.village = "palace";
-  p.pass = passForReward(now + 1000, true); p.effect = "aurora";
+  p.pass = passForReward(now + 1000, true); p.nightPasses.aurora = p.pass; p.effect = "aurora";
   reconcileAccess(p, now + PASS_MS);
   assert.equal(p.village, "cozy"); assert.equal(p.effect, "aurora");
   const restored = parsePreferences(JSON.stringify(p));
@@ -221,4 +223,38 @@ test("legacy global pass and repeat OFF migrate without granting four village re
   assert.equal(p.village, "cozy"); assert.equal(p.repeat, true);
   for (const v of VILLAGES.filter(v => v.premium)) assert.equal(canUseVillage(p, v.id, now), false);
   assert.equal(hasPass(p.pass, now), true);
+});
+
+
+test("three night receipts are independent from each other and all four village receipts", () => {
+  const p = defaults(), now = 1800000000000;
+  assert.deepEqual(NIGHTS.map(n => n.id), ["moonlight", "shooting", "aurora"]);
+  for (const n of NIGHTS) assert.equal(canUseNight(p, n.id, now), false);
+  assert.equal(grantNightPass(p, "moonlight", now, false), false);
+  assert.deepEqual(p.nightPasses, {});
+  assert.equal(grantNightPass(p, "moonlight", now, true), true);
+  const receipt = { ...p.nightPasses.moonlight };
+  assert.equal(grantNightPass(p, "moonlight", now + 1000, true), false);
+  assert.deepEqual(p.nightPasses.moonlight, receipt);
+  assert.equal(canUseNight(p, "shooting", now), false);
+  assert.equal(canUseNight(p, "aurora", now), false);
+  for (const v of VILLAGES.filter(v => v.premium)) assert.equal(canUseVillage(p, v.id, now), false);
+  grantNightPass(p, "shooting", now + 1000, true);
+  grantNightPass(p, "aurora", now + 2000, true);
+  grantVillagePass(p, "palace", now + 2000, true);
+  p.village = "palace"; p.effect = "moonlight";
+  assert.equal(reconcileAccess(p, now + PASS_MS), true);
+  assert.equal(p.effect, null); assert.equal(p.village, "palace");
+  assert.equal(canUseNight(p, "shooting", now + PASS_MS), true);
+  assert.equal(grantNightPass(p, "moonlight", now + PASS_MS, true), true);
+  assert.equal(p.nightPasses.moonlight.expiresAt, now + 2 * PASS_MS);
+});
+test("legacy shared night receipt migrates only the selected theme without renewing it", () => {
+  const now = 1800000000000, pass = passForReward(now, true);
+  const p = parsePreferences(JSON.stringify({ pass, effect: "wishes" }));
+  assert.equal(p.effect, "shooting");
+  assert.deepEqual(p.nightPasses, { shooting: pass });
+  assert.equal(canUseNight(p, "moonlight", now), false);
+  assert.equal(canUseNight(p, "aurora", now), false);
+  assert.deepEqual(parsePreferences(JSON.stringify(p)).nightPasses, p.nightPasses);
 });

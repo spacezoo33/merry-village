@@ -20,6 +20,7 @@ export type Preferences = {
   effect: NightId | null;
   volume: number;
   pass: Pass | null;
+  nightPasses: Partial<Record<NightId, Pass>>;
   villagePasses: Partial<Record<VillageId, Pass>>;
 };
 export const defaults = (): Preferences => ({
@@ -34,6 +35,7 @@ export const defaults = (): Preferences => ({
   volume: 0.35,
   pass: null,
   villagePasses: {},
+  nightPasses: {},
 });
 export function validPass(value: unknown): Pass | null {
   if (!value || typeof value !== "object") return null;
@@ -67,6 +69,7 @@ export function parsePreferences(raw: string | null): Preferences {
     else if (p.track === "lullaby" || p.track === "letter")
       result.track = "holy-night";
     if (NIGHTS.some((n) => n.id === p.effect)) result.effect = p.effect;
+    else if (p.effect === "wishes") result.effect = "shooting";
     if (typeof p.motion === "boolean") result.motion = p.motion;
     if (LIGHT_PATTERNS.some((v) => v.id === p.lightPattern))
       result.lightPattern = p.lightPattern;
@@ -76,6 +79,13 @@ export function parsePreferences(raw: string | null): Preferences {
     if (typeof p.volume === "number" && Number.isFinite(p.volume))
       result.volume = Math.min(1, Math.max(0, p.volume));
     result.pass = validPass(p.pass);
+    for (const theme of NIGHTS) {
+      const pass = validPass(p.nightPasses?.[theme.id]);
+      if (pass) result.nightPasses[theme.id] = pass;
+    }
+    // Preserve only the already selected legacy night for its remaining duration.
+    // Never turn a shared historical receipt into three newly issued rewards.
+    if (p.nightPasses === undefined && result.effect && result.pass) result.nightPasses[result.effect] = result.pass;
     for (const v of VILLAGES.filter(v => v.premium)) {
       const pass = validPass(p.villagePasses?.[v.id]);
       if (pass) result.villagePasses[v.id] = pass;
@@ -97,9 +107,19 @@ export function grantVillagePass(p: Preferences, id: VillageId, now: number, ear
   p.villagePasses[id] = pass;
   return true;
 }
+export function canUseNight(p: Preferences, id: NightId, now: number): boolean {
+  return NIGHTS.some(n => n.id === id) && hasPass(p.nightPasses[id] ?? null, now);
+}
+export function grantNightPass(p: Preferences, id: NightId, now: number, earned: boolean): boolean {
+  if (!NIGHTS.some(n => n.id === id) || canUseNight(p, id, now)) return false;
+  const pass = passForReward(now, earned);
+  if (!pass) return false;
+  p.nightPasses[id] = pass;
+  return true;
+}
 export function reconcileAccess(p: Preferences, now: number): boolean {
   let changed = false;
   if (!canUseVillage(p, p.village, now)) { p.village = "cozy"; changed = true; }
-  if (p.effect && !hasPass(p.pass, now)) { p.effect = null; changed = true; }
+  if (p.effect && !canUseNight(p, p.effect, now)) { p.effect = null; changed = true; }
   return changed;
 }

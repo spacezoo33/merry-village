@@ -57,24 +57,9 @@ export const VILLAGES = [
 ] as const;
 export type VillageId = (typeof VILLAGES)[number]["id"];
 export const NIGHTS = [
-  {
-    id: "aurora",
-    name: "오로라의 밤",
-    description: "민트빛과 보랏빛이 천천히 흐르는 하늘",
-    symbol: "aurora",
-  },
-  {
-    id: "shooting",
-    name: "별빛의 밤",
-    description: "반짝이는 별과 천천히 내려오는 황금빛 입자",
-    symbol: "star",
-  },
-  {
-    id: "wishes",
-    name: "황금빛 밤",
-    description: "마을의 장식과 가로등을 감싸는 풍성한 금빛",
-    symbol: "lantern",
-  },
+  { id: "moonlight", name: "푸른 달빛의 밤", description: "깊은 남색 하늘과 눈 위의 고요한 푸른 달빛", symbol: "moon" },
+  { id: "shooting", name: "황금빛 별의 밤", description: "따뜻한 금빛 별과 더욱 빛나는 트리·가로등", symbol: "star" },
+  { id: "aurora", name: "오로라의 밤", description: "청록과 보랏빛이 천천히 흐르는 겨울 하늘", symbol: "aurora" },
 ] as const;
 export type NightId = (typeof NIGHTS)[number]["id"];
 // Original public-domain melodies, transcribed and freshly synthesised for this app.

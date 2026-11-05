@@ -55,9 +55,10 @@ try {
     }
     // Three night previews still work and keep village receipts empty.
     await page.locator('[data-action="nights"]').click();
-    if (await page.locator('.night-card').count() !== 3) throw Error('night effects changed');
+    if (await page.locator('.night-theme-card').count() !== 3) throw Error('night effects changed');
     await page.locator('[data-effect="aurora"]').click();
-    if (await page.locator('#app').getAttribute('data-effect') !== 'aurora') throw Error('night preview failed');
+    if (await page.locator('#app').getAttribute('data-effect') !== 'none') throw Error('unearned night applied');
+    await page.locator('[data-action="close"]').click();
     await page.locator('.bottom-nav [data-action="villages"]').click();
     await page.locator('.village-card[data-village="cozy"]').click();
     await page.locator('#snow-toggle').click();

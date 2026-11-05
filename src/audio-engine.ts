@@ -1,6 +1,6 @@
 /** Shared device with separately metered stems and a final gentle headroom limiter. */
 export const STEM_NAMES = ["music", "train", "horn"] as const;
-export const STEM_GAIN = { music: 1, train: .75, horn: .7 } as const;
+export const STEM_GAIN = { music: 1, train: .75, horn: .49 } as const;
 export type AudioStem = (typeof STEM_NAMES)[number];
 let shared: AudioContext | null = null;
 let bus: {

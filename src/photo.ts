@@ -1,3 +1,4 @@
+import { drawNightSky, drawNightReflection } from "./night-theme.ts";
 import { SNOW_COUNTS, snowSize, type SnowQuality } from "./snow";
 import { drawDecorLights } from "./decor-lights";
 import { type LightPattern } from "./lighting";
@@ -48,19 +49,7 @@ export async function captureVillage(
   );
   c.fillStyle = "#1c0c0744";
   c.fillRect(0, 0, 1200, 1560);
-  if (effect === "aurora") {
-    const g = c.createLinearGradient(0, 80, 1200, 600);
-    g.addColorStop(0, "#35e5a58c");
-    g.addColorStop(0.5, "#ae74f28a");
-    g.addColorStop(1, "#76e6cb00");
-    c.fillStyle = g;
-    c.beginPath();
-    c.moveTo(0, 100);
-    c.bezierCurveTo(400, 520, 700, 40, 1200, 170);
-    c.lineTo(1200, 450);
-    c.bezierCurveTo(700, 270, 400, 760, 0, 330);
-    c.fill();
-  }
+  drawNightSky(c, effect, 1200, 1560);
   const quality = (document.querySelector<HTMLElement>("#app")?.dataset
     .snowQuality ?? "high") as SnowQuality;
   const counts = SNOW_COUNTS[quality] ?? SNOW_COUNTS.high;
@@ -82,19 +71,10 @@ export async function captureVillage(
   };
   drawSnow("back");
   c.drawImage(atlas, 0, 180, 1200, 1200);
+  drawNightReflection(c, effect, 1200, 180, 1200);
   drawSnow("mid");
   if (actors) c.drawImage(actors, 0, 180, 1200, 1200);
-  drawDecorLights(c, id, pattern, lightingTime, effect === "wishes", 1200, 180);
-  if (effect === "shooting") {
-    for (let i = 0; i < 45; i++) {
-      const x = (i * 197 + 30) % 1200,
-        y = (i * 137 + 80) % 1300;
-      c.fillStyle = i % 3 ? "#ffd48dba" : "#fff5db";
-      c.beginPath();
-      c.arc(x, y, i % 3 ? 2 : 3.5, 0, Math.PI * 2);
-      c.fill();
-    }
-  }
+  drawDecorLights(c, id, pattern, lightingTime, effect === "shooting", 1200, 180);
   drawSnow("front");
   return new Promise((resolve, reject) =>
     canvas.toBlob(

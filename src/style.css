@@ -492,7 +492,7 @@ h1 span {
 #app[data-effect="shooting"] .meteors {
   display: block;
 }
-#app[data-effect="wishes"] .wishes {
+#app[data-effect="shooting"] .wishes {
   display: block;
 }
 .meteors i {
@@ -1317,13 +1317,13 @@ h1 span {
     box-shadow: 0 0 5px 2px #edb14c44;
   }
 }
-#app[data-effect="wishes"] .architectural-lights i {
+#app[data-effect="shooting"] .architectural-lights i {
   width: 3px;
   height: 4px;
   box-shadow: 0 0 19px 8px #ffbb4ba8;
   animation-duration: 6.3s;
 }
-#app[data-effect="wishes"] .wishes {
+#app[data-effect="shooting"] .wishes {
   display: none;
 }
 .scene-controls {
@@ -1807,12 +1807,12 @@ h1 span {
   box-shadow: 0 0 4px 1px var(--bulb-color);
   will-change: opacity;
 }
-#app[data-effect="wishes"] .architectural-lights .decor-bulb {
+#app[data-effect="shooting"] .architectural-lights .decor-bulb {
   width: 0.5%;
   height: 0.5%;
   box-shadow: none;
 }
-#app[data-effect="wishes"] .bulb-emitter {
+#app[data-effect="shooting"] .bulb-emitter {
   box-shadow: 0 0 8px 2px var(--bulb-color);
 }
 
@@ -1833,7 +1833,7 @@ h1 span {
 
 /* Warm sources remain visible at OFF; patterns affect only the extra optical glare. */
 .architectural-lights .decor-bulb:is(.lamp,.accent),
-#app[data-effect="wishes"] .architectural-lights .decor-bulb:is(.lamp,.accent) {
+#app[data-effect="shooting"] .architectural-lights .decor-bulb:is(.lamp,.accent) {
   width: var(--light-w);
   height: var(--light-h);
   margin: 0;
@@ -1844,7 +1844,7 @@ h1 span {
 }
 .decor-bulb:is(.lamp,.accent)::before { display: none; }
 .decor-bulb:is(.lamp,.accent) .bulb-emitter,
-#app[data-effect="wishes"] .decor-bulb:is(.lamp,.accent) .bulb-emitter {
+#app[data-effect="shooting"] .decor-bulb:is(.lamp,.accent) .bulb-emitter {
   inset: 24% 25%;
   opacity: 1;
   border-radius: 45%;
@@ -1900,6 +1900,50 @@ html, body { max-width: 100%; overflow-x: clip; }
 .card-body { padding: 13px 16px; }
 .card-body strong { font-size: 16px; }
 .card-body small { display: block; font-size: 11px; line-height: 1.6; color: #775c38; }
-#app[data-village="aurora-lake"] .aurora { opacity: .6; }
+#app[data-village="aurora-lake"][data-effect="none"] .aurora { opacity: 0; }
 #app[data-village="aurora-lake"].ambient-paused .aurora { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) { #app[data-village="aurora-lake"] .aurora { animation: none; } }
+
+/* Compact, balanced vertical rhythm: distribute spare height inside the experience. */
+.experience { display: flex; flex-direction: column; justify-content: space-evenly; gap: 6px; }
+.hero { flex: none; }
+.selected-village, .now-playing { flex: none; }
+.scene-controls button span { font-size: 9px; }
+.scene-controls button b { display: none !important; }
+#lights-label { display: none; }
+#app[data-effect="moonlight"] { background: linear-gradient(#071b42aa, #102b4544 65%, #21130b66); }
+#app[data-effect="shooting"] { background: linear-gradient(#261a0a66, #56381133, #21130b66); }
+#app[data-effect="aurora"] { background: linear-gradient(#102b3599, #2b234333, #21130b66); }
+.moon-halo { position: absolute; top: 1%; left: 14%; width: 48px; aspect-ratio: 1; border-radius: 50%; opacity: 0; background: radial-gradient(circle, #e8f2ff 0 29%, #a5ceff44 31%, transparent 70%); }
+#app[data-effect="moonlight"] .moon-halo { opacity: .9; }
+#app[data-effect="moonlight"] .aurora, #app[data-effect="shooting"] .aurora { opacity: 0; }
+#scene-host::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: screen; }
+#app[data-effect="moonlight"] #scene-host::after { background: linear-gradient(145deg, #6b9ee512, transparent 80%); }
+#app[data-effect="aurora"] #scene-host::after { background: linear-gradient(135deg, #55bca710, #a07edd13); }
+#app[data-effect="shooting"] #scene-host::after { background: radial-gradient(ellipse, #eeb95010, transparent 75%); }
+#app[data-effect="shooting"] .starfield { opacity: .8; }
+#app[data-effect="shooting"] .decor-bulb .bulb-flare { scale: 1.12; }
+.sheet-open .night-effects *, .ambient-paused .night-effects * { animation-play-state: paused !important; }
+#app[data-snow-quality="low"] .starfield i:nth-child(n+13) { display: none; }
+#app[data-snow-quality="low"] .aurora { filter: none; }
+.night-list { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.night-theme-card { overflow: hidden; border-radius: 18px; border: 1px solid #dfc79e; background: #fffaf0; color: #594127; }
+.night-preview { position: relative; aspect-ratio: 1.5; overflow: hidden; background: #0d1730; }
+.night-preview img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.preview-sky, .preview-stars { position: absolute; inset: 0; pointer-events: none; }
+.preview-moonlight .preview-sky { background: radial-gradient(circle at 18% 20%, #e1eeffdd 0 4%, #93bafa44 5%, transparent 16%), linear-gradient(#08234c77, #689fdf11); }
+.preview-shooting .preview-sky { background: linear-gradient(#5e390b44, #f0bc4822); }
+.preview-shooting .preview-stars { background-image: radial-gradient(circle, #fff2bb 0 1px, transparent 2px); background-size: 37px 43px; opacity: .7; }
+.preview-aurora .preview-sky { background: linear-gradient(145deg, transparent 10%, #45dab64d 29%, transparent 39%, #9274d54d 50%, transparent 68%); }
+.night-card-copy { padding: 14px 16px; }
+.night-card-copy strong { font-size: 16px; }
+.night-card-copy p, .night-card-copy small { display: block; font-size: 12px; line-height: 1.6; margin: 7px 0 12px; }
+@media (prefers-reduced-motion: reduce) { .night-effects * { animation: none !important; } }
+
+#app[data-effect="moonlight"] .night-effects { mask-image: linear-gradient(#000 0 60%, transparent); }
+
+#app[data-effect="aurora"] .aurora { filter: none; animation-duration: 18s; }
+#app[data-effect="shooting"] .starfield { inset: 0 0 auto; height: clamp(64px, 12svh, 100px); }
+/* Feather the gradient boundaries without allocating blurred offscreen surfaces. */
+#app[data-effect="aurora"] .aurora { mask-image: radial-gradient(ellipse at 50% 48%, #000 12%, transparent 72%); opacity: .78; }
+#scene-host::after { mask-image: radial-gradient(ellipse at 50% 65%, #000 15%, transparent 74%); }

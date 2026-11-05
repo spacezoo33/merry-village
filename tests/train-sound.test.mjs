@@ -61,9 +61,9 @@ test("route turns count from lap one; stem gain reductions preserve music and ma
   assert.equal(journeyLap(5 * Math.PI * 2), 6);
   assert.equal(journeyLap(17 * Math.PI * 2), 18);
   const bus = createAudioBus(new FakeContext());
-  assert.deepEqual(STEM_GAIN, { music: 1, train: .75, horn: .7 });
+  assert.deepEqual(STEM_GAIN, { music: 1, train: .75, horn: .49 });
   assert.equal(bus.inputs.music.gain.value, 1);
   assert.equal(bus.inputs.train.gain.value, .75);
-  assert.equal(bus.inputs.horn.gain.value, .7);
+  assert.equal(bus.inputs.horn.gain.value, .49);
   assert.equal(bus.output.gain.value, .9);
 });

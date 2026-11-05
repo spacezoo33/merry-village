@@ -15,9 +15,9 @@ import {
 import {
   defaults,
   parsePreferences,
-  hasPass,
   reconcileAccess,
-  passForReward,
+  canUseNight,
+  grantNightPass,
   canUseVillage,
   grantVillagePass,
 } from "./state";
@@ -46,7 +46,7 @@ try {
   storageWorking = false;
 }
 reconcileAccess(preferences, Date.now());
-let passWasActive = hasPass(preferences.pass, Date.now());
+
 let preview: {
   village: VillageId;
   effect: NightId | null;
@@ -83,7 +83,7 @@ const nav: { id: Sheet; label: string; icon: Icon }[] = [
 ];
 app.innerHTML = `
  <main class="experience">
- <div class="hero"><div class="night-effects" aria-hidden="true"><div class="aurora"></div><div class="starfield"><i style="--sx:7%;--sy:0%;--sd:-0.0s"></i><i style="--sx:44%;--sy:23%;--sd:-0.63s"></i><i style="--sx:81%;--sy:46%;--sd:-1.26s"></i><i style="--sx:18%;--sy:69%;--sd:-1.8900000000000001s"></i><i style="--sx:55%;--sy:2%;--sd:-2.52s"></i><i style="--sx:92%;--sy:25%;--sd:-3.15s"></i><i style="--sx:29%;--sy:48%;--sd:-3.7800000000000002s"></i><i style="--sx:66%;--sy:71%;--sd:-4.41s"></i><i style="--sx:3%;--sy:4%;--sd:-5.04s"></i><i style="--sx:40%;--sy:27%;--sd:-5.67s"></i><i style="--sx:77%;--sy:50%;--sd:-6.3s"></i><i style="--sx:14%;--sy:73%;--sd:-6.93s"></i><i style="--sx:51%;--sy:6%;--sd:-7.5600000000000005s"></i><i style="--sx:88%;--sy:29%;--sd:-8.19s"></i><i style="--sx:25%;--sy:52%;--sd:-8.82s"></i><i style="--sx:62%;--sy:75%;--sd:-9.45s"></i><i style="--sx:99%;--sy:8%;--sd:-10.08s"></i><i style="--sx:36%;--sy:31%;--sd:-10.71s"></i><i style="--sx:73%;--sy:54%;--sd:-11.34s"></i><i style="--sx:10%;--sy:77%;--sd:-11.97s"></i><i style="--sx:47%;--sy:10%;--sd:-12.6s"></i><i style="--sx:84%;--sy:33%;--sd:-13.23s"></i><i style="--sx:21%;--sy:56%;--sd:-13.86s"></i><i style="--sx:58%;--sy:79%;--sd:-14.49s"></i></div><div class="wishes">${Array.from({ length: 12 }, (_, i) => `<i style="--left:${(i * 31 + 9) % 94}%;--delay:-${i * 0.9}s;--duration:${8 + (i % 4)}s"></i>`).join("")}</div></div>
+ <div class="hero"><div class="night-effects" aria-hidden="true"><div class="moon-halo"></div><div class="aurora"></div><div class="starfield"><i style="--sx:7%;--sy:0%;--sd:-0.0s"></i><i style="--sx:44%;--sy:23%;--sd:-0.63s"></i><i style="--sx:81%;--sy:46%;--sd:-1.26s"></i><i style="--sx:18%;--sy:69%;--sd:-1.8900000000000001s"></i><i style="--sx:55%;--sy:2%;--sd:-2.52s"></i><i style="--sx:92%;--sy:25%;--sd:-3.15s"></i><i style="--sx:29%;--sy:48%;--sd:-3.7800000000000002s"></i><i style="--sx:66%;--sy:71%;--sd:-4.41s"></i><i style="--sx:3%;--sy:4%;--sd:-5.04s"></i><i style="--sx:40%;--sy:27%;--sd:-5.67s"></i><i style="--sx:77%;--sy:50%;--sd:-6.3s"></i><i style="--sx:14%;--sy:73%;--sd:-6.93s"></i><i style="--sx:51%;--sy:6%;--sd:-7.5600000000000005s"></i><i style="--sx:88%;--sy:29%;--sd:-8.19s"></i><i style="--sx:25%;--sy:52%;--sd:-8.82s"></i><i style="--sx:62%;--sy:75%;--sd:-9.45s"></i><i style="--sx:99%;--sy:8%;--sd:-10.08s"></i><i style="--sx:36%;--sy:31%;--sd:-10.71s"></i><i style="--sx:73%;--sy:54%;--sd:-11.34s"></i><i style="--sx:10%;--sy:77%;--sd:-11.97s"></i><i style="--sx:47%;--sy:10%;--sd:-12.6s"></i><i style="--sx:84%;--sy:33%;--sd:-13.23s"></i><i style="--sx:21%;--sy:56%;--sd:-13.86s"></i><i style="--sx:58%;--sy:79%;--sd:-14.49s"></i></div><div class="wishes">${Array.from({ length: 12 }, (_, i) => `<i style="--left:${(i * 31 + 9) % 94}%;--delay:-${i * 0.9}s;--duration:${8 + (i % 4)}s"></i>`).join("")}</div></div>
  ${snowLayer("back")}<div id="scene-host"></div>${snowLayer("front")}
  <div class="scene-controls" role="group" aria-label="오르골 조작">${(
    [
@@ -94,7 +94,7 @@ app.innerHTML = `
  )
    .map(
      (c) =>
-       `<button id="${c.id}-toggle" data-action="${c.id}" aria-label="${c.label}" aria-pressed="true">${icon(c.symbol)}<span>${c.label} <b id="${c.id}-label">ON</b></span></button>`,
+       `<button id="${c.id}-toggle" data-action="${c.id}" aria-label="${c.label}" aria-pressed="true">${icon(c.symbol)}<span>${c.label}<b id="${c.id}-label" hidden></b></span></button>`,
    )
    .join("")}</div>
  <p class="graphics-status" id="graphics-status" role="status"></p>
@@ -128,16 +128,15 @@ function persist(): void {
     storageWorking = false;
   }
 }
-let rewardTarget: VillageId | "nights" = "nights";
-function setRewardTarget(target: VillageId | "nights") {
+let rewardTarget: VillageId | NightId = "moonlight";
+function isNightTarget(target: VillageId | NightId): target is NightId { return NIGHTS.some(n => n.id === target); }
+function setRewardTarget(target: VillageId | NightId) {
   if (rewardTarget !== target) adMessage = "";
   rewardTarget = target;
 }
 function villageUnlocked(id: VillageId) { return canUseVillage(preferences, id, Date.now()); }
-function targetActive() { return rewardTarget === "nights" ? unlocked() : villageUnlocked(rewardTarget); }
-function unlocked(): boolean {
-  return hasPass(preferences.pass, Date.now());
-}
+function nightUnlocked(id: NightId) { return canUseNight(preferences, id, Date.now()); }
+function targetActive() { return isNightTarget(rewardTarget) ? nightUnlocked(rewardTarget) : villageUnlocked(rewardTarget); }
 function display() {
   return (
     preview ?? {
@@ -147,7 +146,7 @@ function display() {
     }
   );
 }
-function formatExpiry(pass = preferences.pass): string {
+function formatExpiry(pass: { expiresAt: number } | null | undefined): string {
   return pass
     ? new Intl.DateTimeFormat("ko-KR", {
         timeZone: "Asia/Seoul",
@@ -234,13 +233,14 @@ function render(): void {
   app.dataset.preview = String(!!preview);
   app.querySelector("#village-title")!.textContent = villageById(current.village).name;
   app.querySelector("#village-access")!.textContent = preview ? "잠금 콘텐츠 미리보기 · 아직 선택되지 않았어요" : villageById(current.village).premium ? `${formatExpiry(preferences.villagePasses[current.village])}까지 이용 가능` : "기본 빌리지 · 무료";
+  if (current.effect) app.querySelector("#village-access")!.textContent += ` · ${NIGHTS.find(n => n.id === current.effect)!.name}`;
   (app.querySelector("#preview-unlock") as HTMLButtonElement).hidden = !preview;
   app.dataset.effect = current.effect ?? "none";
   app.classList.add("night");
   actors?.update({
     motion: preferences.motion,
     pattern: preferences.lightPattern,
-    gold: current.effect === "wishes",
+    gold: current.effect === "shooting",
     hidden: document.hidden || rewardBusy || dialog.open,
   });
   trainSound.syncJourney(
@@ -269,7 +269,8 @@ function render(): void {
       id === "lights" ? "true" : String(preferences[id]),
     );
     app.querySelector(`#${id}-label`)!.textContent =
-      id === "lights" ? "조명" : preferences[id] ? "ON" : "OFF";
+      "";
+    if (id !== "lights") button.setAttribute("aria-label", `${id === "motion" ? "동작" : "눈"} · ${preferences[id] ? "켜짐" : "꺼짐"}`);
     if (id === "lights") {
       button.setAttribute("aria-label", "조명");
     }
@@ -294,9 +295,11 @@ function closeSheet(): void {
   app.classList.remove("sheet-open");
   syncVisibility();
 }
-function openSheet(next: Sheet): void {
+function openSheet(next: Sheet, explicitTarget?: VillageId | NightId): void {
+  if (explicitTarget) setRewardTarget(explicitTarget);
+  else if ((next === "pass" || next === "photo") && preview) setRewardTarget(preview.village);
   checkExpiry();
-  if (next === "nights") setRewardTarget("nights");
+
   const photoLocked = next === "photo" && !!preview;
   if (photoLocked) next = "pass";
   if (sheet === "photo" && next !== "photo") cleanPhoto();
@@ -343,12 +346,17 @@ function renderSheet(): void {
   } else if (sheet === "music") {
     content.innerHTML = `<p class="sheet-description">오래된 원선율을 바탕으로 직접 만든 오르골 캐럴 5곡이에요.<br>브라우저에서는 첫 재생에 터치가 필요할 수 있어요.</p><p class="small-note">선택한 곡을 계속 반복해요. 이전·다음 버튼으로 곡을 바꿀 수 있어요.</p><div class="tracks">${TRACKS.map((t, i) => `<button class="track-row" data-track="${t.id}" ${!t.available ? "disabled" : ""} aria-pressed="${preferences.track === t.id}"><span class="track-number">0${i + 1}</span><span><strong>${t.name}</strong><small>${t.mood} · ${t.bpm} BPM</small></span><span class="track-note">${icon("music")}</span></button>`).join("")}</div><div class="volume-control"><label for="volume">음량</label><input id="volume" type="range" min="0" max="1" step="0.05" value="${preferences.volume}"><output id="volume-value">${Math.round(preferences.volume * 100)}%</output><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button></div><p class="small-note">외부 녹음물을 사용하지 않는 자체 합성 연주예요. 악보의 Public Domain 표기와 출처는 프로젝트 음악 권리 문서에 기록했어요.</p>`;
   } else if (sheet === "nights") {
-    content.innerHTML = `<p class="sheet-description">마을에 다른 빛을 켜보세요. 움직임 줄이기를 켜면 고요한 정지 효과로 보여드려요.</p><button class="basic-night" data-effect="none">${icon("moon")}<span><strong>기본 밤</strong><small>늘 무료인 따뜻한 창문 불빛</small></span>${display().effect === null ? icon("check") : ""}</button><div class="night-list">${NIGHTS.map((n) => `<button class="night-card night-${n.id}" data-effect="${n.id}" aria-pressed="${display().effect === n.id}"><span class="night-swatch">${icon(n.symbol)}</span><span><strong>${n.name}</strong><small>${n.description}</small><em>${unlocked() ? "이용 가능" : "특별 · 미리보기"}</em></span>${icon(unlocked() ? "check" : "lock")}</button>`).join("")}</div><button class="wide-button gold" data-action="pass">${icon("star")}${unlocked() ? "내 이용권 확인" : "광고 시청으로 특별한 7일"}</button>`;
+    content.innerHTML = `<p class="sheet-description">현재 선택한 빌리지에 입히는 세 가지 밤이에요. 카드 이미지는 정적 미리보기예요.</p><button class="basic-night" data-effect="none">${icon("moon")}<span><strong>기본 분위기</strong><small>원래의 따뜻한 겨울밤으로 돌아가기</small></span>${preferences.effect === null ? icon("check") : ""}</button><div class="night-list">${NIGHTS.map(n => {
+      const pass = preferences.nightPasses[n.id], active = nightUnlocked(n.id);
+      const days = pass ? Math.max(1, Math.ceil((pass.expiresAt - Date.now()) / 86400000)) : 0;
+      const status = active ? `이용 중 · ${days}일 남음 · ${formatExpiry(pass)}까지` : pass ? "이용 기간이 끝났어요. 광고를 보고 다시 열 수 있어요." : "광고 1회 시청하고 7일 동안 특별한 밤을 즐겨보세요.";
+      return `<article class="night-theme-card"><div class="night-preview preview-${n.id}" aria-label="${n.name} 정적 미리보기">${productThumbnail(preferences.village)}<i class="preview-sky"></i><i class="preview-stars"></i></div><div class="night-card-copy"><strong>${n.name}</strong><p>${n.description}</p><small>${status}</small><button class="wide-button gold" data-effect="${n.id}" aria-pressed="${preferences.effect === n.id}">${active ? (preferences.effect === n.id ? "적용 중" : "이 밤 적용하기") : "광고 보고 7일 열기"}</button></div></article>`;
+    }).join("")}</div>`;
   } else if (sheet === "pass") {
     const active = targetActive();
-    const label = rewardTarget === "nights" ? "특별한 밤 3종" : villageById(rewardTarget).name;
-    const pass = rewardTarget === "nights" ? preferences.pass : preferences.villagePasses[rewardTarget];
-    content.innerHTML = `<div class="pass-hero"><span class="pass-seal">${icon("star")}<strong>7</strong><small>DAYS</small></span><h3>${label}</h3><p>${active ? `${formatExpiry(pass)}까지 이용할 수 있어요.` : "보상형 광고 완료 후 이 콘텐츠를 7일 동안 이용해요."}</p></div><p class="sheet-description">빌리지 이용권은 각각 독립적이에요. 이용 중에는 기간을 누적 연장할 수 없어요. 특별한 밤 이용권은 별도로 유지돼요.</p>${active ? "" : `<button class="wide-button gold" data-action="reward" ${!availability?.ready || rewardBusy ? "disabled" : ""}>${icon("play")}${rewardBusy ? "보상 확인 중…" : "광고 보고 7일 이용하기"}</button>`}<p class="ad-status" role="status">${adMessage || (active ? "이미 이용 중인 콘텐츠예요." : availability?.reason ?? "광고 연결을 확인하고 있어요.")}</p><p class="small-note">이 기기의 로컬 이용권이에요. 저장소를 지우거나 기기를 바꾸면 유지되지 않아요.</p><button class="text-button" data-action="villages">빌리지 둘러보기</button>`;
+    const label = isNightTarget(rewardTarget) ? NIGHTS.find(n => n.id === rewardTarget)!.name : villageById(rewardTarget).name;
+    const pass = isNightTarget(rewardTarget) ? preferences.nightPasses[rewardTarget] : preferences.villagePasses[rewardTarget];
+    content.innerHTML = `<div class="pass-hero"><span class="pass-seal">${icon("star")}<strong>7</strong><small>DAYS</small></span><h3>${label}</h3><p>${active ? `${formatExpiry(pass)}까지 이용할 수 있어요.` : "보상형 광고 완료 후 이 콘텐츠를 7일 동안 이용해요."}</p></div><p class="sheet-description">빌리지 이용권은 각각 독립적이에요. 이용 중에는 기간을 누적 연장할 수 없어요. 특별한 밤도 각 테마마다 독립된 이용권이에요.</p>${active ? "" : `<button class="wide-button gold" data-action="reward" ${!availability?.ready || rewardBusy ? "disabled" : ""}>${icon("play")}${rewardBusy ? "보상 확인 중…" : "광고 보고 7일 열기"}</button>`}<p class="ad-status" role="status">${adMessage || (active ? "이미 이용 중인 콘텐츠예요." : availability?.reason ?? "광고 연결을 확인하고 있어요.")}</p><p class="small-note">이 기기의 로컬 이용권이에요. 저장소를 지우거나 기기를 바꾸면 유지되지 않아요.</p><button class="text-button" data-action="villages">빌리지 둘러보기</button>`;
   } else if (sheet === "photo") {
     content.innerHTML = `<p class="sheet-description">버튼 없이 마을만 담은 1200 × 1560 PNG 사진이에요.</p><div class="photo-preview">${photoUrl ? `<img src="${photoUrl}" alt="${villageById(display().village).name} 촬영 사진">` : `<div class="photo-loading">${icon("camera")}<span>${photoBusy ? "사진을 만들고 있어요…" : "사진을 준비해 주세요"}</span></div>`}</div><div class="photo-actions"><button class="wide-button gold" data-action="save-photo" ${!photoBlob ? "disabled" : ""}>${icon("download")}사진 저장</button><button class="wide-button" data-action="retake" ${photoBusy ? "disabled" : ""}>다시 촬영</button></div><p class="small-note">웹에서는 다운로드를 요청해요. 저장되지 않으면 사진을 길게 눌러 저장해 주세요.</p>`;
   }
@@ -375,10 +383,10 @@ async function claimReward(): Promise<void> {
       if (sheet === "pass") renderSheet();
     });
     if (earned) {
-      if (target === "nights") {
-        preferences.pass = passForReward(Date.now(), earned);
-        passWasActive = unlocked();
-        if (preview?.effect) { preferences.effect = preview.effect; preferences.night = preview.night; }
+      if (isNightTarget(target)) {
+        if (grantNightPass(preferences, target, Date.now(), earned)) {
+          preferences.effect = target; preferences.night = true;
+        }
       } else if (grantVillagePass(preferences, target, Date.now(), earned)) {
         preferences.village = target;
       }
@@ -459,13 +467,9 @@ async function saveCurrentPhoto(): Promise<void> {
   }
 }
 function checkExpiry(): void {
-  const active = unlocked();
-  const expired = passWasActive && !active;
-  passWasActive = active;
-  if (reconcileAccess(preferences, Date.now()) || expired) {
+  if (reconcileAccess(preferences, Date.now())) {
     preview = null;
-    if (expired)
-      adMessage = "이용권이 만료됐어요. 무료 마을은 계속 이용할 수 있어요.";
+    adMessage = "이용 기간이 끝났어요. 광고를 보고 다시 열 수 있어요.";
     persist();
     render();
     if (sheet) renderSheet();
@@ -490,7 +494,7 @@ function syncVisibility(): void {
   actors?.update({
     motion: preferences.motion,
     pattern: preferences.lightPattern,
-    gold: display().effect === "wishes",
+    gold: display().effect === "shooting",
     hidden: visualHidden,
   });
   setAudioHidden(hidden);
@@ -506,7 +510,7 @@ app.addEventListener("click", (event) => {
     checkExpiry();
     if (villageById(village).premium && !villageUnlocked(village)) {
       setRewardTarget(village);
-      preview = { village, effect: null, night: preferences.night };
+      preview = { village, effect: preferences.effect, night: preferences.night };
     }
     else {
       preview = null;
@@ -532,18 +536,15 @@ app.addEventListener("click", (event) => {
   }
   if (effect) {
     checkExpiry();
-    if (effect !== "none" && !unlocked()) {
-      setRewardTarget("nights");
-      preview = { village: preferences.village, effect, night: true };
+    if (effect !== "none" && !nightUnlocked(effect)) {
+      setRewardTarget(effect);
+      openSheet("pass", effect); // Static card preview only; do not apply an unearned theme.
+      return;
     }
-    else {
-      preview = null;
-      preferences.effect = effect === "none" ? null : effect;
-      preferences.night = true;
-      persist();
-    }
-    render();
-    closeSheet();
+    preferences.effect = effect === "none" ? null : effect;
+    preferences.night = true;
+    if (preview) preview.effect = preferences.effect;
+    persist(); render(); closeSheet();
     return;
   }
   switch (target.dataset.action) {

@@ -35,6 +35,14 @@ export async function captureVillage(
   lightingTime = 0,
   basicPattern: BasicPattern = "gentle",
 ): Promise<Blob> {
+  if (!isBasicVillage(id)) {
+    if (!actors) throw new Error("트리와 기차를 포함한 촬영을 지원하지 않는 환경이에요.");
+    const pixels = actors.getContext("2d")?.getImageData(0,0,actors.width,actors.height).data;
+    let visible = false;
+    if (pixels) for (let i = 3; i < pixels.length; i += 4) if (pixels[i]! > 0) { visible = true; break; }
+    if (!visible) throw new Error("촬영할 트리와 기차 화면을 준비하지 못했어요.");
+  }
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   for (const key of images.keys()) if (key !== background && key !== productSource(id)) images.delete(key);
   const [bg, atlas] = await Promise.all([load(background), load(productSource(id))]);
   const canvas = document.createElement("canvas");
@@ -84,12 +92,13 @@ export async function captureVillage(
     m.globalCompositeOperation = "destination-in";
     m.drawImage(await load(basicMaskSource(id)),0,0,1199,1312);
     c.drawImage(masked,0,100,width,height);
-    drawBasicLights(c,id,basicPattern,lightingTime,0,100,width,height);
+    drawBasicLights(c,id,basicPattern,lightingTime,0,100,width,height,reducedMotion);
   } else c.drawImage(atlas, 0, 180, 1200, 1200);
   drawNightReflection(c, effect, 1200, 180, 1200);
-  drawSnow("mid");
   if (actors) c.drawImage(actors, 0, 180, 1200, 1200);
   if (!isBasicVillage(id)) drawDecorLights(c, id, pattern, lightingTime, effect === "shooting", 1200, 180);
+  // The live scene places both mid and front snow above actors and exterior lights.
+  drawSnow("mid");
   drawSnow("front");
   return new Promise((resolve, reject) =>
     canvas.toBlob(

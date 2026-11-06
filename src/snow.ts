@@ -1,16 +1,20 @@
 export const SNOW_COUNTS = {
-  high: { back: 36, mid: 42, front: 33 },
-  medium: { back: 27, mid: 33, front: 24 },
-  low: { back: 21, mid: 27, front: 18 },
+  high: { back: 45, mid: 53, front: 41 },
+  medium: { back: 34, mid: 41, front: 30 },
+  low: { back: 26, mid: 34, front: 23 },
 } as const;
-export const SNOW_SIZE_SCALE = .55;
+/** Powder-sized sources; only one in six particles is 25% larger. */
 export function snowSize(depth: "back" | "mid" | "front", index: number) {
-  return ((depth === "back" ? 2 : depth === "mid" ? 4 : 7) + index % 3) * 1.75 * SNOW_SIZE_SCALE;
+  const base = depth === "back" ? 1.35 : depth === "mid" ? 1.375 : 1.4;
+  return base * (index % 6 === 0 ? 1.25 : 1);
+}
+export function snowOpacity(depth: "back" | "mid" | "front", index: number) {
+  return (depth === "back" ? .38 : depth === "mid" ? .5 : .6) * [.9, 1, 1.08][index % 3]!;
 }
 export type SnowQuality = keyof typeof SNOW_COUNTS;
 export function snowLayer(depth: "back" | "mid" | "front"): string {
   const count = SNOW_COUNTS.high[depth];
-  return `<div class="snowfall snow-${depth}" aria-hidden="true">${Array.from({ length: count }, (_, i) => `<i style="--x:${(i * 37 + (depth === "front" ? 17 : 5)) % 100}%;--y:${(i * 23) % 96}%;--delay:-${i * 0.91}s;--duration:${(depth === "back" ? 21 : depth === "mid" ? 17 : 13) + (i % 7)}s;--size:${snowSize(depth, i)}px;--drift:${i % 2 ? 12 : -14}px"></i>`).join("")}</div>`;
+  return `<div class="snowfall snow-${depth}" aria-hidden="true">${Array.from({ length: count }, (_, i) => `<i style="--x:${(i * 37 + (depth === "front" ? 17 : 5)) % 100}%;--y:${(i * 23) % 96}%;--delay:-${i * 0.91}s;--duration:${(depth === "back" ? 25 : depth === "mid" ? 21 : 17) + (i % 7)}s;--size:${snowSize(depth, i)}px;--snow-alpha:${snowOpacity(depth, i)};--drift:${i % 2 ? 8 : -10}px"></i>`).join("")}</div>`;
 }
 /** Hysteresis: drop after a sustained 3s budget violation, recover only after 15s. */
 export class SnowBudget {

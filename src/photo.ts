@@ -1,5 +1,5 @@
 import { drawNightSky, drawNightReflection } from "./night-theme.ts";
-import { SNOW_COUNTS, snowSize, type SnowQuality } from "./snow";
+import { SNOW_COUNTS, snowSize, snowOpacity, type SnowQuality } from "./snow";
 import { drawDecorLights } from "./decor-lights";
 import { type LightPattern } from "./lighting";
 import background from "./assets/christmas-room.webp";
@@ -61,12 +61,15 @@ export async function captureVillage(
       const x = (i * 197 + (depth === "front" ? 113 : 31)) % 1200,
         y = (i * 137 + 41 + (depth === "mid" ? 173 : 0)) % 1560;
       const radius = snowSize(depth, i) / 2 * pixelScale;
+      c.save();
+      c.globalAlpha = snowOpacity(depth, i);
       const g = c.createRadialGradient(x, y, 0, x, y, radius);
-      g.addColorStop(0, depth === "back" ? "#fff9ed88" : "#fffbedcc");
+      g.addColorStop(0, "#fffdf6");
       g.addColorStop(0.5, "#fff9ec77");
       g.addColorStop(1, "#fff9ec00");
       c.fillStyle = g;
       c.fillRect(x - radius, y - radius, 2 * radius, 2 * radius);
+      c.restore();
     }
   };
   drawSnow("back");

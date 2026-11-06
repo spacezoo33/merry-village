@@ -1714,14 +1714,14 @@ h1 span {
     translate: 0 -5%;
   }
   8% {
-    opacity: 0.88;
+    opacity: var(--snow-alpha, .5);
   }
   40% {
     translate: var(--drift) 180px;
   }
   70% {
     translate: calc(var(--drift) * -0.5) 350px;
-    opacity: 0.8;
+    opacity: calc(var(--snow-alpha, .5) * .85);
   }
   100% {
     translate: var(--drift) 530px;
@@ -1751,7 +1751,7 @@ h1 span {
   padding: 7px 2px;
 }
 #lights-toggle > span {
-  font-size: 0;
+  font-size: 9px;
 }
 #lights-label {
   display: block;
@@ -1772,14 +1772,12 @@ h1 span {
 .snow-mid {
   opacity: 0.75;
 }
-#app[data-snow-quality="medium"] .snow-back i:nth-child(n + 28),
-#app[data-snow-quality="medium"] .snow-mid i:nth-child(n + 34),
-#app[data-snow-quality="medium"] .snow-front i:nth-child(n + 25),
-#app[data-snow-quality="low"] .snow-back i:nth-child(n + 22),
-#app[data-snow-quality="low"] .snow-mid i:nth-child(n + 28),
-#app[data-snow-quality="low"] .snow-front i:nth-child(n + 19) {
-  display: none;
-}
+#app[data-snow-quality="medium"] .snow-back i:nth-child(n + 35),
+#app[data-snow-quality="medium"] .snow-mid i:nth-child(n + 42),
+#app[data-snow-quality="medium"] .snow-front i:nth-child(n + 31),
+#app[data-snow-quality="low"] .snow-back i:nth-child(n + 27),
+#app[data-snow-quality="low"] .snow-mid i:nth-child(n + 35),
+#app[data-snow-quality="low"] .snow-front i:nth-child(n + 24) { display: none; }
 /* Separate controllable bulbs sit on architectural garlands/eaves, not window panes. */
 .architectural-lights .decor-bulb {
   position: absolute;
@@ -1947,3 +1945,13 @@ html, body { max-width: 100%; overflow-x: clip; }
 /* Feather the gradient boundaries without allocating blurred offscreen surfaces. */
 #app[data-effect="aurora"] .aurora { mask-image: radial-gradient(ellipse at 50% 48%, #000 12%, transparent 72%); opacity: .78; }
 #scene-host::after { mask-image: radial-gradient(ellipse at 50% 65%, #000 15%, transparent 74%); }
+
+/* Tiny powder grains, without the former foreground bokeh/shadow enlargement. */
+.snow-back, .snow-mid, .snow-front { filter: none; }
+.snowfall i, .snowfall i:nth-child(3n), .snow-front i:nth-child(3n) {
+  background: radial-gradient(circle, #fffdf6 25%, #fff9ecaa 48%, transparent 78%);
+  border-radius: 50%; box-shadow: none; filter: none; transform: none;
+  animation-duration: var(--duration);
+}
+.snowfall i:nth-child(7n) { filter: blur(.15px); }
+@media (prefers-reduced-motion: reduce) { .snowfall i { opacity: var(--snow-alpha, .5); } }

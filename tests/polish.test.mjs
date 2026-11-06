@@ -14,10 +14,10 @@ test("lighting has four modes, defaults gentle, and never cycles OFF", () => {
   }
   assert.deepEqual(ids, ["all", "alternate", "random", "gentle", "all"]);
 });
-test("111 fine snowflakes degrade after sustained frame pressure and recover without flapping", () => {
+test("139 fine snowflakes degrade after sustained frame pressure and recover without flapping", () => {
   assert.equal(
     Object.values(SNOW_COUNTS.high).reduce((a, b) => a + b),
-    111,
+    139,
   );
   const b = new SnowBudget();
   for (let i = 0; i < 210; i++) b.sample(16.7);
@@ -117,12 +117,17 @@ test("extra glare attacks quickly and fades to zero without changing the four so
   }
 });
 
-test("powder snow shrinks every depth by 45% while preserving the 111-particle budget", async () => {
-  const { snowSize, snowLayer } = await import("../src/snow.ts");
-  for (const [depth, base] of [["back", 2], ["mid", 4], ["front", 7]]) {
-    for (let i = 0; i < 3; i++) assert.equal(snowSize(depth, i), (base + i) * 1.75 * .55);
+test("powder snow stays below 2px; only one in six grains is 25% larger", async () => {
+  const { snowSize, snowLayer, snowOpacity } = await import("../src/snow.ts");
+  for (const depth of ["back", "mid", "front"]) {
+    const sizes = Array.from({ length: 60 }, (_, i) => snowSize(depth, i));
+    const small = Math.min(...sizes), large = Math.max(...sizes);
+    assert.equal(large / small, 1.25);
+    assert.equal(sizes.filter(s => s === large).length, 10);
+    assert.ok(large <= 1.75 && small >= 1.35);
     assert.equal((snowLayer(depth).match(/<i /g) ?? []).length, SNOW_COUNTS.high[depth]);
+    assert.ok(snowOpacity(depth, 0) !== snowOpacity(depth, 1));
   }
-  assert.ok(snowSize("front", 0) > snowSize("mid", 0));
-  assert.ok(snowSize("mid", 0) > snowSize("back", 0));
+  assert.ok(snowSize("front", 0) / snowSize("back", 1) <= 1.3, "even across depths, no grain exceeds the small size by 30%");
+  assert.deepEqual(Object.values(SNOW_COUNTS).map(c => Object.values(c).reduce((a,b)=>a+b,0)), [139,105,83]);
 });

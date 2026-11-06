@@ -21,7 +21,7 @@ try {
       const grains=[...document.querySelectorAll('.hero .snowfall i')];
       if(grains.length!==180)throw Error('snow count');
       const sizes=grains.map(g=>parseFloat(getComputedStyle(g).width));
-      if(Math.max(...sizes)>2.61||Math.min(...sizes)<1.79||Math.max(...sizes)/Math.min(...sizes)>1.46)throw Error('large grain');
+      if(Math.max(...sizes)>3.0||Math.min(...sizes)<2.06||Math.max(...sizes)/Math.min(...sizes)>1.46)throw Error('large grain');
       for(const g of grains){const s=getComputedStyle(g);if(s.boxShadow!=='none'||!/none|blur\(0.15px\)/.test(s.filter))throw Error('bokeh filter')}
       const a=document.querySelector('#app'), counts={};
       for(const quality of ['high','medium','low']){a.dataset.snowQuality=quality;counts[quality]=grains.filter(g=>getComputedStyle(g).display!=='none').length}

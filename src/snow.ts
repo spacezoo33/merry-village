@@ -6,7 +6,7 @@ export const SNOW_COUNTS = {
 /** Powder-sized sources; only one in six particles is 25% larger. */
 export function snowSize(depth: "back" | "mid" | "front", index: number) {
   const base = depth === "back" ? 1.8 : depth === "mid" ? 1.95 : 2.08;
-  return base * (index % 6 === 0 ? 1.25 : 1);
+  return base * (index % 6 === 0 ? 1.25 : 1) * 1.15;
 }
 export function snowOpacity(depth: "back" | "mid" | "front", index: number) {
   return (depth === "back" ? .65 : depth === "mid" ? .7 : .75) + [0, .1, .2][index % 3]!;

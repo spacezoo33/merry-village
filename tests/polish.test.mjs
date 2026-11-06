@@ -117,14 +117,14 @@ test("extra glare attacks quickly and fades to zero without changing the four so
   }
 });
 
-test("powder snow stays within 1.8–2.6px; only one in six grains is 25% larger", async () => {
+test("powder snow stays within 2.07–2.99px; only one in six grains is 25% larger", async () => {
   const { snowSize, snowLayer, snowOpacity } = await import("../src/snow.ts");
   for (const depth of ["back", "mid", "front"]) {
     const sizes = Array.from({ length: 60 }, (_, i) => snowSize(depth, i));
     const small = Math.min(...sizes), large = Math.max(...sizes);
-    assert.equal(large / small, 1.25);
+    assert.ok(Math.abs(large / small - 1.25) < 1e-12);
     assert.equal(sizes.filter(s => s === large).length, 10);
-    assert.ok(large <= 2.6 && small >= 1.8);
+    assert.ok(large <= 2.99 && small >= 2.07);
     assert.equal((snowLayer(depth).match(/<i /g) ?? []).length, SNOW_COUNTS.high[depth]);
     assert.ok(snowOpacity(depth, 0) !== snowOpacity(depth, 1));
   }

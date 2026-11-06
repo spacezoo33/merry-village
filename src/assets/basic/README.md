@@ -1,1 +1,10 @@
-Basic village image assets
+# 무료 베이직 원본
+
+사용자가 `4240465`에 업로드한 PNG 2장을 사용합니다. `.png.png` 중복 확장자만 `.png`로 정리했으며 이미지 내용은 바이트 단위로 동일합니다. 이미지 재생성·구도 변경·배경 제거를 하지 않았습니다.
+
+- `christmas-bell-house.png` → 크리스마스 종탑집
+- `snowman-forest-house.png` → 눈사람 숲속집
+
+원본: 각각 1199×1312 PNG. 화면용: 960×1050 WebP(quality 88). 선택 카드: 320×350 WebP(quality 82). 원본 SHA-256은 `tests/fixtures/basic-originals.json`에서 검사합니다. 원본 PNG는 보존하며 웹 번들에서는 화면용 WebP만 참조합니다.
+
+베이직의 별·장식 전구·가로등/랜턴 좌표는 `src/basic-lights.ts`에서 원본 1199×1312 기준으로 개별 지정합니다. 창문은 원본의 따뜻한 불빛을 그대로 유지합니다. 프리미엄 에셋은 변경하지 않습니다.

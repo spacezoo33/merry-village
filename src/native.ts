@@ -23,7 +23,7 @@ export async function adAvailability(): Promise<AdAvailability> {
     return {
       ready: false,
       reason:
-        "보상형 광고 연결을 준비 중이에요. 지금은 특별 빌리지와 밤을 미리 볼 수 있어요.",
+        "보상형 광고 연결을 준비 중이에요. 지금은 프리미엄 빌리지를 미리 볼 수 있어요.",
       groupId,
     };
   if (import.meta.env.DEV)
@@ -38,7 +38,8 @@ export async function adAvailability(): Promise<AdAvailability> {
     if (
       sdk.Environment.environment !== "toss" ||
       !sdk.loadFullScreenAd.isSupported() ||
-      !sdk.showFullScreenAd.isSupported()
+      !sdk.showFullScreenAd.isSupported() ||
+      !sdk.Environment.getServerTime.isSupported()
     )
       return {
         ready: false,
@@ -64,7 +65,8 @@ export async function earnPass(
   if (
     sdk.Environment.environment !== "toss" ||
     !sdk.loadFullScreenAd.isSupported() ||
-    !sdk.showFullScreenAd.isSupported()
+    !sdk.showFullScreenAd.isSupported() ||
+    !sdk.Environment.getServerTime.isSupported()
   )
     return false;
   return watchReward(
@@ -163,4 +165,30 @@ export async function bindSafeArea(root: HTMLElement): Promise<() => void> {
     apply(sdk.SafeArea.get());
     return sdk.SafeArea.subscribe({ onEvent: apply });
   } catch { return () => {}; }
+}
+
+/** SDK 3.9.0 server time, never a simulated ad or a device-time reward. */
+export async function serverTime(): Promise<number | null> {
+  try {
+    const sdk = await import("@apps-in-toss/web-framework");
+    if (sdk.Environment.environment !== "toss" || !sdk.Environment.getServerTime.isSupported()) return null;
+    const value = await Promise.race([sdk.Environment.getServerTime(), new Promise<undefined>(r => setTimeout(r, 2500))]);
+    return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+  } catch { return null; }
+}
+export async function readNativePreferences(key: string): Promise<string | null> {
+  try {
+    const sdk = await import("@apps-in-toss/web-framework");
+    if (sdk.Environment.environment !== "toss") return null;
+    return await Promise.race([sdk.Storage.getItem(key),new Promise<null>(r=>setTimeout(()=>r(null),2500))]);
+  } catch { return null; }
+}
+let storageWrite: Promise<void> = Promise.resolve();
+export function writeNativePreferences(key: string, value: string): void {
+  storageWrite = storageWrite.then(async () => {
+    try {
+      const sdk = await import("@apps-in-toss/web-framework");
+      if (sdk.Environment.environment === "toss") await sdk.Storage.setItem(key,value);
+    } catch { /* local browser copy remains; account/server verification is not provided */ }
+  });
 }

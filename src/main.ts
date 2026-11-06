@@ -4,26 +4,22 @@ import { snowLayer, adaptSnow } from "./snow";
 import { TrainSound } from "./train-sound";
 import "./style.css";
 import {
-  VILLAGES,
-  NIGHTS,
+  VILLAGES, BASIC_VILLAGES, ALL_VILLAGES, isBasicVillage,
   TRACKS,
   villageById,
-  type VillageId,
+  type SelectionId,
   type TrackId,
-  type NightId,
 } from "./catalog";
 import {
   defaults,
   parsePreferences,
   reconcileAccess,
-  canUseNight,
-  grantNightPass,
   canUseVillage,
   grantVillagePass,
 } from "./state";
 import { Actors } from "./actors";
 import { scene } from "./scene";
-import { productThumbnail } from "./product";
+import { productThumbnail, preloadProduct } from "./product";
 import { icon, type Icon } from "./icons";
 import { MusicPlayer, type MusicState } from "./music";
 import {
@@ -32,27 +28,31 @@ import {
   adAvailability,
   earnPass,
   savePhoto,
-  type AdAvailability,
+  type AdAvailability, serverTime, readNativePreferences, writeNativePreferences,
 } from "./native";
 import { captureVillage } from "./photo";
 
+import { BasicLights, nextBasicPattern } from "./basic-lights";
+import { AccessClock } from "./access-clock";
+
+async function start() {
 const KEY = "merry-village:v2";
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 let storageWorking = true;
 let preferences = defaults();
 try {
-  preferences = parsePreferences(localStorage.getItem(KEY));
+  preferences = parsePreferences((await readNativePreferences(KEY)) ?? localStorage.getItem(KEY));
 } catch {
   storageWorking = false;
 }
-reconcileAccess(preferences, Date.now());
+let savedTime = 0;
+try { savedTime = Number(localStorage.getItem(KEY + ":time")) || 0; } catch { /* storage unavailable */ }
+const clock = new AccessClock(Math.max(savedTime,preferences.lastSeenTime));
+const initialTime = await serverTime();
+if (initialTime) clock.sync(initialTime);
+reconcileAccess(preferences, clock.now());
 
-let preview: {
-  village: VillageId;
-  effect: NightId | null;
-  night: boolean;
-} | null = null;
-type Sheet = "villages" | "music" | "nights" | "photo" | "pass";
+type Sheet = "villages" | "music" | "photo" | "pass";
 let sheet: Sheet | null = null;
 let backGeneration = 0;
 let stopSheetBack = () => {};
@@ -71,19 +71,20 @@ let rewardBusy = false,
   photoToken = 0;
 let musicState: MusicState = "paused";
 let actors: Actors | null = null;
-let renderedVillage: VillageId | null = null;
+let basicLights: BasicLights | null = null;
+let savedJourney = 0;
+let renderedVillage: SelectionId | null = null;
 const app = document.querySelector<HTMLElement>("#app")!;
 let stopSafeArea = () => {};
 void bindSafeArea(app).then(stop => { stopSafeArea = stop; });
 const nav: { id: Sheet; label: string; icon: Icon }[] = [
   { id: "villages", label: "빌리지", icon: "village" },
   { id: "music", label: "음악 선택", icon: "music" },
-  { id: "nights", label: "특별한 밤", icon: "night" },
   { id: "photo", label: "사진 촬영", icon: "camera" },
 ];
 app.innerHTML = `
  <main class="experience">
- <div class="hero"><div class="night-effects" aria-hidden="true"><div class="moon-halo"></div><div class="aurora"></div><div class="starfield"><i style="--sx:7%;--sy:0%;--sd:-0.0s"></i><i style="--sx:44%;--sy:23%;--sd:-0.63s"></i><i style="--sx:81%;--sy:46%;--sd:-1.26s"></i><i style="--sx:18%;--sy:69%;--sd:-1.8900000000000001s"></i><i style="--sx:55%;--sy:2%;--sd:-2.52s"></i><i style="--sx:92%;--sy:25%;--sd:-3.15s"></i><i style="--sx:29%;--sy:48%;--sd:-3.7800000000000002s"></i><i style="--sx:66%;--sy:71%;--sd:-4.41s"></i><i style="--sx:3%;--sy:4%;--sd:-5.04s"></i><i style="--sx:40%;--sy:27%;--sd:-5.67s"></i><i style="--sx:77%;--sy:50%;--sd:-6.3s"></i><i style="--sx:14%;--sy:73%;--sd:-6.93s"></i><i style="--sx:51%;--sy:6%;--sd:-7.5600000000000005s"></i><i style="--sx:88%;--sy:29%;--sd:-8.19s"></i><i style="--sx:25%;--sy:52%;--sd:-8.82s"></i><i style="--sx:62%;--sy:75%;--sd:-9.45s"></i><i style="--sx:99%;--sy:8%;--sd:-10.08s"></i><i style="--sx:36%;--sy:31%;--sd:-10.71s"></i><i style="--sx:73%;--sy:54%;--sd:-11.34s"></i><i style="--sx:10%;--sy:77%;--sd:-11.97s"></i><i style="--sx:47%;--sy:10%;--sd:-12.6s"></i><i style="--sx:84%;--sy:33%;--sd:-13.23s"></i><i style="--sx:21%;--sy:56%;--sd:-13.86s"></i><i style="--sx:58%;--sy:79%;--sd:-14.49s"></i></div><div class="wishes">${Array.from({ length: 12 }, (_, i) => `<i style="--left:${(i * 31 + 9) % 94}%;--delay:-${i * 0.9}s;--duration:${8 + (i % 4)}s"></i>`).join("")}</div></div>
+ <div class="hero">
  ${snowLayer("back")}<div id="scene-host"></div>${snowLayer("front")}
  <div class="scene-controls" role="group" aria-label="오르골 조작">${(
    [
@@ -99,7 +100,7 @@ app.innerHTML = `
    .join("")}</div>
  <p class="graphics-status" id="graphics-status" role="status"></p>
  </div>
- <div class="selected-village"><div><strong id="village-title"></strong><small id="village-access"></small></div><button id="preview-unlock" data-action="pass" hidden>광고로 7일 이용</button></div>
+ <div class="selected-village"><div><strong id="village-title"></strong><small id="village-access"></small></div></div>
  <div class="now-playing"><div class="song-detail"><strong id="song-name"></strong><div class="song-timeline"><input id="progress" type="range" min="0" max="100" value="0" step="0.1" aria-label="음악 재생 위치"><span id="music-time">0:00 / 0:00</span></div><span id="music-status" role="status"></span></div><button class="transport" data-action="previous" aria-label="이전 곡">${icon("play")}</button><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button><button class="transport" data-action="next" aria-label="다음 곡">${icon("play")}</button></div>
  </main><nav class="bottom-nav" aria-label="메인 메뉴">${nav.map((item) => `<button data-action="${item.id}" aria-label="${item.label}" aria-expanded="false">${icon(item.icon)}<span>${item.label}</span></button>`).join("")}</nav>
  <dialog class="sheet" id="sheet" aria-labelledby="sheet-title"><div class="sheet-shell"><header class="sheet-header"><div><p class="eyebrow">MERRY VILLAGE</p><h2 id="sheet-title"></h2></div><button class="close-button" data-action="close" aria-label="닫기">${icon("close")}</button></header><div id="sheet-content"></div><p id="sheet-feedback" class="sheet-feedback" role="status" aria-live="polite"></p></div></dialog>
@@ -121,31 +122,25 @@ function toast(message: string): void {
   toastTimer = setTimeout(() => el.classList.remove("visible"), 4200);
 }
 function persist(): void {
+  preferences.lastSeenTime = clock.now();
+  writeNativePreferences(KEY, JSON.stringify(preferences));
   try {
     localStorage.setItem(KEY, JSON.stringify(preferences));
+    localStorage.setItem(KEY + ":time", String(clock.now()));
     storageWorking = true;
   } catch {
     storageWorking = false;
   }
 }
-let rewardTarget: VillageId | NightId = "moonlight";
-function isNightTarget(target: VillageId | NightId): target is NightId { return NIGHTS.some(n => n.id === target); }
-function setRewardTarget(target: VillageId | NightId) {
+let rewardTarget: SelectionId = "cozy";
+function setRewardTarget(target: SelectionId) {
   if (rewardTarget !== target) adMessage = "";
   rewardTarget = target;
 }
-function villageUnlocked(id: VillageId) { return canUseVillage(preferences, id, Date.now()); }
-function nightUnlocked(id: NightId) { return canUseNight(preferences, id, Date.now()); }
-function targetActive() { return isNightTarget(rewardTarget) ? nightUnlocked(rewardTarget) : villageUnlocked(rewardTarget); }
-function display() {
-  return (
-    preview ?? {
-      village: preferences.village,
-      effect: preferences.effect,
-      night: preferences.night,
-    }
-  );
-}
+function villageUnlocked(id: SelectionId) { return canUseVillage(preferences, id, clock.now()); }
+function targetActive() { return villageUnlocked(rewardTarget); }
+const basic = () => isBasicVillage(preferences.village);
+function display() { return { village: preferences.village, effect: null, night: preferences.night }; }
 function formatExpiry(pass: { expiresAt: number } | null | undefined): string {
   return pass
     ? new Intl.DateTimeFormat("ko-KR", {
@@ -167,17 +162,21 @@ const player = new MusicPlayer(
   () => { void player.play(); },
 );
 player.setRepeat(true);
+let playerTrack = preferences.track;
+function selectTrack(track: TrackId) { playerTrack = track; player.select(track); }
 function changeTrack(direction: number) {
+  if (basic()) return;
   const tracks = TRACKS.filter((t) => t.available);
   const i = tracks.findIndex((t) => t.id === preferences.track);
   preferences.track = tracks[(i + direction + tracks.length) % tracks.length]!
     .id as TrackId;
-  player.select(preferences.track);
+  selectTrack(preferences.track);
   void player.play();
   persist();
   updateMusic();
 }
 function updateMusic(): void {
+  for (const button of app.querySelectorAll<HTMLButtonElement>('.transport')) button.hidden = basic();
   const track = TRACKS.find((t) => t.id === preferences.track)!;
   app.querySelector("#song-name")!.textContent = track.name;
   app.querySelector("#music-status")!.textContent =
@@ -208,18 +207,31 @@ function updateMusic(): void {
 }
 function render(): void {
   const current = display();
+  if (basic()) preferences.track = "snow";
+  if (playerTrack !== preferences.track) {
+    const playing = musicState === "playing";
+    selectTrack(preferences.track);
+    if (playing) void player.play();
+  }
+  app.dataset.tier = basic() ? "basic" : "premium";
   if (renderedVillage !== current.village) {
-    const journey = actors?.journeyTime ?? 0;
+    savedJourney = actors?.journeyTime ?? savedJourney;
     trainSound.setRunning(false);
     actors?.destroy();
+    actors = null;
+    basicLights?.destroy();
+    basicLights = null;
     app.querySelector("#scene-host")!.innerHTML = scene(current.village);
-    try {
+    if (isBasicVillage(current.village)) {
+      basicLights = new BasicLights(app.querySelector<HTMLCanvasElement>(".basic-lights")!,current.village);
+      app.querySelector("#graphics-status")!.textContent = "";
+    } else try {
       actors = new Actors(
         app.querySelector<HTMLElement>("#scene-host .actor-stage")!,
         current.village,
         (journey, x, visible, lap) =>
           trainSound.updatePosition(journey, x, visible, current.village, lap),
-        journey,
+        savedJourney,
       );
       app.querySelector("#graphics-status")!.textContent = "";
     } catch {
@@ -230,11 +242,9 @@ function render(): void {
     renderedVillage = current.village;
   }
   app.dataset.village = current.village;
-  app.dataset.preview = String(!!preview);
   app.querySelector("#village-title")!.textContent = villageById(current.village).name;
-  app.querySelector("#village-access")!.textContent = preview ? "잠금 콘텐츠 미리보기 · 아직 선택되지 않았어요" : villageById(current.village).premium ? `${formatExpiry(preferences.villagePasses[current.village])}까지 이용 가능` : "기본 빌리지 · 무료";
-  if (current.effect) app.querySelector("#village-access")!.textContent += ` · ${NIGHTS.find(n => n.id === current.effect)!.name}`;
-  (app.querySelector("#preview-unlock") as HTMLButtonElement).hidden = !preview;
+  app.querySelector("#village-access")!.textContent = villageById(current.village).premium ? `${formatExpiry(!isBasicVillage(current.village) ? preferences.villagePasses[current.village] : null)}까지 이용 가능` : "무료 베이직 · 항상 이용 가능";
+
   app.dataset.effect = current.effect ?? "none";
   app.classList.add("night");
   actors?.update({
@@ -257,6 +267,7 @@ function render(): void {
       !document.hidden &&
       !rewardBusy && !dialog.open,
   );
+  basicLights?.update(preferences.basicPattern,document.hidden || rewardBusy || dialog.open,reducedMotion.matches);
   app.classList.toggle("snow-off", !preferences.snow);
   if (actors)
     app.querySelector("#graphics-status")!.textContent = reducedMotion.matches
@@ -278,7 +289,8 @@ function render(): void {
       button.title = `${lightLabel(preferences)} · 눌러 다음 패턴`;
       button.dataset.pattern = preferences.lightPattern;
     }
-    if (id === "motion") button.disabled = !actors;
+    if (id === "motion") { button.disabled = !actors; button.hidden = basic(); }
+    if (id === "lights" && basic()) { button.dataset.pattern = preferences.basicPattern; button.title = preferences.basicPattern === "gentle" ? "은은한 조명" : "반짝이는 조명"; }
   }
   updateMusic();
 }
@@ -295,13 +307,10 @@ function closeSheet(): void {
   app.classList.remove("sheet-open");
   syncVisibility();
 }
-function openSheet(next: Sheet, explicitTarget?: VillageId | NightId): void {
+function openSheet(next: Sheet, explicitTarget?: SelectionId): void {
   if (explicitTarget) setRewardTarget(explicitTarget);
-  else if ((next === "pass" || next === "photo") && preview) setRewardTarget(preview.village);
   checkExpiry();
 
-  const photoLocked = next === "photo" && !!preview;
-  if (photoLocked) next = "pass";
   if (sheet === "photo" && next !== "photo") cleanPhoto();
   sheet = next;
   app.querySelector("#sheet-feedback")!.textContent = "";
@@ -322,41 +331,35 @@ function openSheet(next: Sheet, explicitTarget?: VillageId | NightId): void {
       else stopSheetBack = stop;
     });
   }
-  if (photoLocked)
-    app.querySelector("#sheet-feedback")!.textContent =
-      "미리보기 사진 저장은 이용권이 필요해요. 기본 마을은 무료로 촬영할 수 있어요.";
   if (next === "pass") void checkAds();
   if (next === "photo" && !photoBlob && !photoBusy) void takePhoto();
   syncVisibility();
 }
-function cardLabel(id: VillageId, premium: boolean): string {
-  return premium ? (villageUnlocked(id) ? "특별 · 이용 가능" : "특별 · 잠금 · 광고 시청") : "기본 · 무료";
+function cardLabel(id: SelectionId, premium: boolean): string {
+  return premium ? (villageUnlocked(id) ? "프리미엄 · 이용 중" : "프리미엄 · 잠금 · 광고 시청") : "기본 · 무료";
 }
 function renderSheet(): void {
   const title = {
     villages: "오늘은 어떤 빌리지로 갈까요?",
     music: "마음에 닿는 오르골",
-    nights: "조금 더 특별한 밤",
     photo: "이 순간을 사진으로",
     pass: "특별한 겨울, 7일 동안",
   };
   app.querySelector("#sheet-title")!.textContent = sheet ? title[sheet] : "";
   if (sheet === "villages") {
-    content.innerHTML = `<p class="sheet-description">무료 마을 3곳은 언제든 머물 수 있어요. 특별 마을은 이용권 없이도 미리 볼 수 있어요.</p><div class="village-grid">${VILLAGES.map((v) => `<button class="village-card" data-village="${v.id}" aria-pressed="${!preview && preferences.village === v.id}"><span class="card-art card-${v.id}">${productThumbnail(v.id)}</span><span class="card-body"><span class="card-badge ${v.premium ? "premium" : ""}">${v.premium ? icon("star") : icon("check")}${cardLabel(v.id, v.premium)}</span><strong>${v.name}</strong><span>${v.subtitle}</span><small>${v.premium ? (villageUnlocked(v.id) ? `${formatExpiry(preferences.villagePasses[v.id])}까지` : "미리보기 가능 · 광고 보상 후 7일 이용") : "언제든 선택할 수 있어요"}</small></span></button>`).join("")}</div><p class="small-note">특별 빌리지를 누르면 미리 볼 수 있어요. 화면의 광고 이용 버튼에서 해당 빌리지 이용권을 받을 수 있어요.</p>`;
-  } else if (sheet === "music") {
-    content.innerHTML = `<p class="sheet-description">오래된 원선율을 바탕으로 직접 만든 오르골 캐럴 5곡이에요.<br>브라우저에서는 첫 재생에 터치가 필요할 수 있어요.</p><p class="small-note">선택한 곡을 계속 반복해요. 이전·다음 버튼으로 곡을 바꿀 수 있어요.</p><div class="tracks">${TRACKS.map((t, i) => `<button class="track-row" data-track="${t.id}" ${!t.available ? "disabled" : ""} aria-pressed="${preferences.track === t.id}"><span class="track-number">0${i + 1}</span><span><strong>${t.name}</strong><small>${t.mood} · ${t.bpm} BPM</small></span><span class="track-note">${icon("music")}</span></button>`).join("")}</div><div class="volume-control"><label for="volume">음량</label><input id="volume" type="range" min="0" max="1" step="0.05" value="${preferences.volume}"><output id="volume-value">${Math.round(preferences.volume * 100)}%</output><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button></div><p class="small-note">외부 녹음물을 사용하지 않는 자체 합성 연주예요. 악보의 Public Domain 표기와 출처는 프로젝트 음악 권리 문서에 기록했어요.</p>`;
-  } else if (sheet === "nights") {
-    content.innerHTML = `<p class="sheet-description">현재 선택한 빌리지에 입히는 세 가지 밤이에요. 카드 이미지는 정적 미리보기예요.</p><button class="basic-night" data-effect="none">${icon("moon")}<span><strong>기본 분위기</strong><small>원래의 따뜻한 겨울밤으로 돌아가기</small></span>${preferences.effect === null ? icon("check") : ""}</button><div class="night-list">${NIGHTS.map(n => {
-      const pass = preferences.nightPasses[n.id], active = nightUnlocked(n.id);
-      const days = pass ? Math.max(1, Math.ceil((pass.expiresAt - Date.now()) / 86400000)) : 0;
-      const status = active ? `이용 중 · ${days}일 남음 · ${formatExpiry(pass)}까지` : pass ? "이용 기간이 끝났어요. 광고를 보고 다시 열 수 있어요." : "광고 1회 시청하고 7일 동안 특별한 밤을 즐겨보세요.";
-      return `<article class="night-theme-card"><div class="night-preview preview-${n.id}" aria-label="${n.name} 정적 미리보기">${productThumbnail(preferences.village)}<i class="preview-sky"></i><i class="preview-stars"></i></div><div class="night-card-copy"><strong>${n.name}</strong><p>${n.description}</p><small>${status}</small><button class="wide-button gold" data-effect="${n.id}" aria-pressed="${preferences.effect === n.id}">${active ? (preferences.effect === n.id ? "적용 중" : "이 밤 적용하기") : "광고 보고 7일 열기"}</button></div></article>`;
+    const cards = (list: typeof ALL_VILLAGES) => `<div class="village-grid">${list.map(v => {
+      const active = villageUnlocked(v.id), pass = !isBasicVillage(v.id) ? preferences.villagePasses[v.id] : null;
+      const days = pass ? Math.max(1,Math.ceil((pass.expiresAt-clock.now())/86400000)) : 0;
+      return `<button class="village-card" data-village="${v.id}" aria-pressed="${preferences.village === v.id}"><span class="card-art card-${v.id}">${productThumbnail(v.id)}</span><span class="card-body"><span class="card-badge ${v.premium ? "premium" : ""}">${v.premium ? icon("star") : icon("check")}${cardLabel(v.id,v.premium)}</span><strong>${v.name}</strong><span>${v.subtitle}</span><small>${!v.premium ? "광고 없이 항상 무료" : active ? `이용 중 · ${days}일 남음 · ${formatExpiry(pass)}까지` : pass ? "이용 기간 만료 · 광고 보고 다시 이용" : "광고 보고 7일 이용"}</small></span></button>`;
     }).join("")}</div>`;
+    content.innerHTML = `<h3>무료 베이직</h3>${cards([...BASIC_VILLAGES])}<h3>프리미엄 빌리지</h3><p class="sheet-description">광고 1회 정상 시청 후 선택한 빌리지를 7일 동안 이용해요. 잠긴 마을은 정적 이미지로 미리 볼 수 있어요.</p>${cards([...VILLAGES])}`;
+  } else if (sheet === "music") {
+    content.innerHTML = `<p class="sheet-description">${basic() ? "무료 베이직은 고요한 밤 한 곡을 반복해요." : "직접 만든 오르골 캐럴 5곡이에요."}<br>브라우저에서는 첫 재생에 터치가 필요할 수 있어요.</p><p class="small-note">선택한 곡을 계속 반복해요.${basic() ? "" : " 이전·다음 버튼으로 곡을 바꿀 수 있어요."}</p><div class="tracks">${(basic() ? TRACKS.filter(t => t.id === "snow") : TRACKS).map((t, i) => `<button class="track-row" data-track="${t.id}" ${!t.available ? "disabled" : ""} aria-pressed="${preferences.track === t.id}"><span class="track-number">0${i + 1}</span><span><strong>${t.name}</strong><small>${t.mood} · ${t.bpm} BPM</small></span><span class="track-note">${icon("music")}</span></button>`).join("")}</div><div class="volume-control"><label for="volume">음량</label><input id="volume" type="range" min="0" max="1" step="0.05" value="${preferences.volume}"><output id="volume-value">${Math.round(preferences.volume * 100)}%</output><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button></div><p class="small-note">외부 녹음물을 사용하지 않는 자체 합성 연주예요. 악보의 Public Domain 표기와 출처는 프로젝트 음악 권리 문서에 기록했어요.</p>`;
   } else if (sheet === "pass") {
     const active = targetActive();
-    const label = isNightTarget(rewardTarget) ? NIGHTS.find(n => n.id === rewardTarget)!.name : villageById(rewardTarget).name;
-    const pass = isNightTarget(rewardTarget) ? preferences.nightPasses[rewardTarget] : preferences.villagePasses[rewardTarget];
-    content.innerHTML = `<div class="pass-hero"><span class="pass-seal">${icon("star")}<strong>7</strong><small>DAYS</small></span><h3>${label}</h3><p>${active ? `${formatExpiry(pass)}까지 이용할 수 있어요.` : "보상형 광고 완료 후 이 콘텐츠를 7일 동안 이용해요."}</p></div><p class="sheet-description">빌리지 이용권은 각각 독립적이에요. 이용 중에는 기간을 누적 연장할 수 없어요. 특별한 밤도 각 테마마다 독립된 이용권이에요.</p>${active ? "" : `<button class="wide-button gold" data-action="reward" ${!availability?.ready || rewardBusy ? "disabled" : ""}>${icon("play")}${rewardBusy ? "보상 확인 중…" : "광고 보고 7일 열기"}</button>`}<p class="ad-status" role="status">${adMessage || (active ? "이미 이용 중인 콘텐츠예요." : availability?.reason ?? "광고 연결을 확인하고 있어요.")}</p><p class="small-note">이 기기의 로컬 이용권이에요. 저장소를 지우거나 기기를 바꾸면 유지되지 않아요.</p><button class="text-button" data-action="villages">빌리지 둘러보기</button>`;
+    const label = villageById(rewardTarget).name;
+    const pass = !isBasicVillage(rewardTarget) ? preferences.villagePasses[rewardTarget] : null;
+    content.innerHTML = `<div class="locked-village-preview">${productThumbnail(rewardTarget)}</div><div class="pass-hero"><span class="pass-seal">${icon("star")}<strong>7</strong><small>DAYS</small></span><h3>${label}</h3><p>${active ? `${formatExpiry(pass)}까지 이용할 수 있어요.` : "보상형 광고 완료 후 이 콘텐츠를 7일 동안 이용해요."}</p></div><p class="sheet-description">빌리지 이용권은 각각 독립적이에요. 이용 중에는 기간을 누적 연장할 수 없어요.</p>${active ? "" : `<button class="wide-button gold" data-action="reward" ${!availability?.ready || rewardBusy ? "disabled" : ""}>${icon("play")}${rewardBusy ? "보상 확인 중…" : pass ? "광고 보고 다시 이용" : "광고 보고 7일 이용"}</button>`}<p class="ad-status" role="status">${adMessage || (active ? "이미 이용 중인 콘텐츠예요." : availability?.reason ?? "광고 연결을 확인하고 있어요.")}</p><p class="small-note">이 기기의 로컬 이용권이에요. 저장소를 지우거나 기기를 바꾸면 유지되지 않아요.</p><button class="text-button" data-action="villages">빌리지 둘러보기</button>`;
   } else if (sheet === "photo") {
     content.innerHTML = `<p class="sheet-description">버튼 없이 마을만 담은 1200 × 1560 PNG 사진이에요.</p><div class="photo-preview">${photoUrl ? `<img src="${photoUrl}" alt="${villageById(display().village).name} 촬영 사진">` : `<div class="photo-loading">${icon("camera")}<span>${photoBusy ? "사진을 만들고 있어요…" : "사진을 준비해 주세요"}</span></div>`}</div><div class="photo-actions"><button class="wide-button gold" data-action="save-photo" ${!photoBlob ? "disabled" : ""}>${icon("download")}사진 저장</button><button class="wide-button" data-action="retake" ${photoBusy ? "disabled" : ""}>다시 촬영</button></div><p class="small-note">웹에서는 다운로드를 요청해요. 저장되지 않으면 사진을 길게 눌러 저장해 주세요.</p>`;
   }
@@ -383,14 +386,14 @@ async function claimReward(): Promise<void> {
       if (sheet === "pass") renderSheet();
     });
     if (earned) {
-      if (isNightTarget(target)) {
-        if (grantNightPass(preferences, target, Date.now(), earned)) {
-          preferences.effect = target; preferences.night = true;
-        }
-      } else if (grantVillagePass(preferences, target, Date.now(), earned)) {
-        preferences.village = target;
-      }
-      preview = null;
+      const verifiedTime = await serverTime();
+      if (!verifiedTime) { adMessage = "서버 시간을 확인하지 못해 이용권을 지급하지 않았어요. 연결 상태를 확인해 주세요."; return; }
+      clock.sync(verifiedTime);
+      if (!grantVillagePass(preferences,target,clock.now(),earned)) return;
+      persist();
+      try { await preloadProduct(target); }
+      catch { adMessage = "이용권은 저장됐지만 이미지를 불러오지 못했어요. 빌리지에서 다시 선택해 주세요."; return; }
+      preferences.village = target;
       persist();
       render();
       adMessage = "보상 확인이 완료됐어요. 특별한 겨울을 7일 동안 즐겨보세요.";
@@ -413,7 +416,7 @@ async function claimReward(): Promise<void> {
 }
 async function takePhoto(): Promise<void> {
   checkExpiry();
-  if (photoBusy || preview) return;
+  if (photoBusy) return;
   cleanPhoto();
   photoBusy = true;
   const token = photoToken,
@@ -430,7 +433,8 @@ async function takePhoto(): Promise<void> {
       current.effect,
       captureActors?.snapshot() ?? null,
       preferences.lightPattern,
-      actors?.lightingTime ?? 0,
+      actors?.lightingTime ?? basicLights?.time ?? 0,
+      preferences.basicPattern,
     );
     if (token !== photoToken || sheet !== "photo") return;
     photoBlob = blob;
@@ -445,6 +449,7 @@ async function takePhoto(): Promise<void> {
   }
 }
 async function saveCurrentPhoto(): Promise<void> {
+  checkExpiry();
   if (!photoBlob) return;
   const button = content.querySelector<HTMLButtonElement>(
     "[data-action=save-photo]",
@@ -467,17 +472,19 @@ async function saveCurrentPhoto(): Promise<void> {
   }
 }
 function checkExpiry(): void {
-  if (reconcileAccess(preferences, Date.now())) {
-    preview = null;
+  if (reconcileAccess(preferences, clock.now())) {
     adMessage = "이용 기간이 끝났어요. 광고를 보고 다시 열 수 있어요.";
+    cleanPhoto();
     persist();
     render();
     if (sheet) renderSheet();
+    if (sheet === "photo") void takePhoto();
     toast("이용권 기간이 끝나 무료 콘텐츠로 돌아왔어요.");
   }
 }
 function syncVisibility(): void {
   const hidden = document.hidden || rewardBusy;
+  basicLights?.update(preferences.basicPattern,hidden || dialog.open,reducedMotion.matches);
   const visualHidden = hidden || dialog.open;
   app.classList.toggle("ambient-paused", hidden);
   player.setHidden(hidden);
@@ -500,21 +507,26 @@ function syncVisibility(): void {
   setAudioHidden(hidden);
   if (!document.hidden) checkExpiry();
 }
-app.addEventListener("click", (event) => {
+let selectionGeneration = 0;
+app.addEventListener("click", async (event) => {
   const target = (event.target as Element).closest<HTMLButtonElement>("button");
   if (!target || target.disabled || rewardBusy) return;
-  const village = target.dataset.village as VillageId | undefined,
-    track = target.dataset.track as TrackId | undefined,
-    effect = target.dataset.effect as NightId | "none" | undefined;
+  const village = target.dataset.village as SelectionId | undefined,
+    track = target.dataset.track as TrackId | undefined;
   if (village) {
     checkExpiry();
     if (villageById(village).premium && !villageUnlocked(village)) {
-      setRewardTarget(village);
-      preview = { village, effect: preferences.effect, night: preferences.night };
+      openSheet("pass",village);
+      return;
     }
     else {
-      preview = null;
+      const generation = ++selectionGeneration;
+      try { await preloadProduct(village); } catch { toast("빌리지 이미지를 불러오지 못했어요. 다시 선택해 주세요."); return; }
+      if (generation !== selectionGeneration) return;
+      checkExpiry();
+      if (!villageUnlocked(village)) { openSheet("pass",village); return; }
       preferences.village = village;
+      if (isBasicVillage(village)) preferences.track = "snow";
       persist();
     }
     render();
@@ -522,35 +534,22 @@ app.addEventListener("click", (event) => {
     return;
   }
   if (track) {
+    if (basic() && track !== "snow") return;
     if (!TRACKS.some((t) => t.id === track && t.available)) {
       toast("이 곡은 권리 확인 중이라 재생할 수 없어요.");
       return;
     }
     preferences.track = track;
     persist();
-    player.select(track);
+    selectTrack(track);
     void player.play();
     render();
     renderSheet();
     return;
   }
-  if (effect) {
-    checkExpiry();
-    if (effect !== "none" && !nightUnlocked(effect)) {
-      setRewardTarget(effect);
-      openSheet("pass", effect); // Static card preview only; do not apply an unearned theme.
-      return;
-    }
-    preferences.effect = effect === "none" ? null : effect;
-    preferences.night = true;
-    if (preview) preview.effect = preferences.effect;
-    persist(); render(); closeSheet();
-    return;
-  }
   switch (target.dataset.action) {
     case "villages":
     case "music":
-    case "nights":
     case "photo":
     case "pass":
       openSheet(target.dataset.action);
@@ -572,7 +571,8 @@ app.addEventListener("click", (event) => {
       render();
       break;
     case "lights":
-      Object.assign(preferences, nextLighting(preferences));
+      if (basic()) preferences.basicPattern = nextBasicPattern(preferences.basicPattern);
+      else Object.assign(preferences, nextLighting(preferences));
       persist();
       render();
       break;
@@ -631,11 +631,14 @@ dialog.addEventListener("close", () => {
     b.setAttribute("aria-expanded", "false");
 });
 document.addEventListener("visibilitychange", syncVisibility);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) void serverTime().then(t => { if (t) { clock.sync(t); checkExpiry(); persist(); } });
+});
 reducedMotion.addEventListener("change", render);
-const expiryTimer = setInterval(checkExpiry, 30_000);
+const expiryTimer = setInterval(checkExpiry, 1000);
 const gesture = (event: PointerEvent) => {
   if (
-    preferences.motion &&
+    !!actors && preferences.motion &&
     !reducedMotion.matches &&
     !trainSound.diagnostics.running
   )
@@ -664,6 +667,7 @@ progress.addEventListener("input", () => {
 const progressTimer = setInterval(() => {
   if (!document.hidden) updateProgress();
 }, 400);
+await preloadProduct(preferences.village);
 render();
 persist();
 syncVisibility();
@@ -674,6 +678,7 @@ if (import.meta.hot)
     releaseSheetBack();
     stopSafeArea();
     stopSnowMonitor();
+    basicLights?.destroy();
     actors?.destroy();
     reducedMotion.removeEventListener("change", render);
     clearInterval(progressTimer);
@@ -686,3 +691,8 @@ if (import.meta.hot)
     document.removeEventListener("visibilitychange", syncVisibility);
     document.removeEventListener("pointerdown", gesture);
   });
+
+}
+void start().catch(() => {
+  document.querySelector("#app")!.textContent = "빌리지를 불러오지 못했어요. 연결 상태를 확인하고 다시 열어주세요.";
+});

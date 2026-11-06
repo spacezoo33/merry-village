@@ -4,7 +4,8 @@ import { drawDecorLights } from "./decor-lights";
 import { type LightPattern } from "./lighting";
 import background from "./assets/christmas-room.webp";
 import { productSource } from "./product";
-import type { NightId, VillageId } from "./catalog";
+import { isBasicVillage, type NightId, type SelectionId } from "./catalog";
+import { drawBasicLights, type BasicPattern } from "./basic-lights";
 const images = new Map<string, Promise<HTMLImageElement>>();
 async function load(src: string) {
   if (!images.has(src))
@@ -24,13 +25,14 @@ async function load(src: string) {
 }
 /** UI-free photograph; copies the current actual WebGL pose rather than a stock train. */
 export async function captureVillage(
-  id: VillageId,
+  id: SelectionId,
   _night: boolean,
   snow: boolean,
   effect: NightId | null,
   actors: HTMLCanvasElement | null,
   pattern: LightPattern = "gentle",
   lightingTime = 0,
+  basicPattern: BasicPattern = "gentle",
 ): Promise<Blob> {
   for (const key of images.keys()) if (key !== background && key !== productSource(id)) images.delete(key);
   const [bg, atlas] = await Promise.all([load(background), load(productSource(id))]);
@@ -73,11 +75,15 @@ export async function captureVillage(
     }
   };
   drawSnow("back");
-  c.drawImage(atlas, 0, 180, 1200, 1200);
+  if (isBasicVillage(id)) {
+    const width = 1040, height = width * 1312 / 1199;
+    c.drawImage(atlas,80,200,width,height);
+    drawBasicLights(c,id,basicPattern,lightingTime,80,200,width,height);
+  } else c.drawImage(atlas, 0, 180, 1200, 1200);
   drawNightReflection(c, effect, 1200, 180, 1200);
   drawSnow("mid");
   if (actors) c.drawImage(actors, 0, 180, 1200, 1200);
-  drawDecorLights(c, id, pattern, lightingTime, effect === "shooting", 1200, 180);
+  if (!isBasicVillage(id)) drawDecorLights(c, id, pattern, lightingTime, effect === "shooting", 1200, 180);
   drawSnow("front");
   return new Promise((resolve, reject) =>
     canvas.toBlob(

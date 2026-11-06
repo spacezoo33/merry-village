@@ -4,7 +4,7 @@ export const VILLAGES = [
     name: "포근한 크리스마스",
     subtitle: "불빛이 모이는 우리 동네",
     detail: "트리와 작은 집, 산타가 반기는 메리빌리지의 첫 번째 겨울.",
-    premium: false,
+    premium: true,
     accent: "#d5a35b",
     kind: "cozy",
   },
@@ -13,7 +13,7 @@ export const VILLAGES = [
     name: "눈꽃 숲속 마을",
     subtitle: "고요한 숲에서 쉬어가요",
     detail: "눈 덮인 소나무 사이로 루돌프와 눈사람이 기다려요.",
-    premium: false,
+    premium: true,
     accent: "#92b3a0",
     kind: "forest",
   },
@@ -22,7 +22,7 @@ export const VILLAGES = [
     name: "종소리 작은 성당",
     subtitle: "따뜻한 창가에 머무는 밤",
     detail: "작은 성당과 옹기종기 모인 집들이 만드는 평온한 풍경.",
-    premium: false,
+    premium: true,
     accent: "#dac4a0",
     kind: "chapel",
   },
@@ -127,5 +127,14 @@ export type TrackId =
   | "waltz"
   | "holy-night"
   | "bethlehem";
-export const villageById = (id: VillageId) =>
-  VILLAGES.find((v) => v.id === id)!;
+export const BASIC_VILLAGES = [
+  { id: "christmas-bell-house", name: "크리스마스 종탑집", subtitle: "작은 집과 트리의 포근한 크리스마스", detail: "따뜻한 창문과 작은 가로등이 반기는 무료 오르골.", premium: false },
+  { id: "snowman-forest-house", name: "눈사람 숲속집", subtitle: "눈사람이 기다리는 조용한 숲속집", detail: "초록 지붕 아래 눈사람과 트리가 함께하는 무료 오르골.", premium: false },
+] as const;
+export type BasicVillageId = (typeof BASIC_VILLAGES)[number]["id"];
+export type SelectionId = VillageId | BasicVillageId;
+export const ALL_VILLAGES = [...BASIC_VILLAGES, ...VILLAGES];
+export function isBasicVillage(id: SelectionId): id is BasicVillageId {
+  return BASIC_VILLAGES.some(v => v.id === id);
+}
+export const villageById = (id: SelectionId) => ALL_VILLAGES.find(v => v.id === id)!;

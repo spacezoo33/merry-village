@@ -65,7 +65,7 @@ try {
     if (!await page.locator('#app').evaluate(a => a.classList.contains('snow-off'))) throw Error('snow OFF');
     await page.locator('#snow-toggle').click();
     const count = await page.locator('.hero .snowfall i').count();
-    if (count !== 139) throw Error(`snow count ${count}`);
+    if (count !== 180) throw Error(`snow count ${count}`);
     results.push({ width, height, ...layout, snowParticles: count, songLoop: true, fourLockedPreviews: true });
     await page.close();
   }

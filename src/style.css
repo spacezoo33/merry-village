@@ -1721,7 +1721,7 @@ h1 span {
   }
   70% {
     translate: calc(var(--drift) * -0.5) 350px;
-    opacity: calc(var(--snow-alpha, .5) * .85);
+    opacity: var(--snow-alpha, .8);
   }
   100% {
     translate: var(--drift) 530px;
@@ -1772,12 +1772,12 @@ h1 span {
 .snow-mid {
   opacity: 0.75;
 }
-#app[data-snow-quality="medium"] .snow-back i:nth-child(n + 35),
-#app[data-snow-quality="medium"] .snow-mid i:nth-child(n + 42),
-#app[data-snow-quality="medium"] .snow-front i:nth-child(n + 31),
-#app[data-snow-quality="low"] .snow-back i:nth-child(n + 27),
-#app[data-snow-quality="low"] .snow-mid i:nth-child(n + 35),
-#app[data-snow-quality="low"] .snow-front i:nth-child(n + 24) { display: none; }
+#app[data-snow-quality="medium"] .snow-back i:nth-child(n + 46),
+#app[data-snow-quality="medium"] .snow-mid i:nth-child(n + 46),
+#app[data-snow-quality="medium"] .snow-front i:nth-child(n + 46),
+#app[data-snow-quality="low"] .snow-back i:nth-child(n + 37),
+#app[data-snow-quality="low"] .snow-mid i:nth-child(n + 37),
+#app[data-snow-quality="low"] .snow-front i:nth-child(n + 37) { display: none; }
 /* Separate controllable bulbs sit on architectural garlands/eaves, not window panes. */
 .architectural-lights .decor-bulb {
   position: absolute;
@@ -1947,9 +1947,10 @@ html, body { max-width: 100%; overflow-x: clip; }
 #scene-host::after { mask-image: radial-gradient(ellipse at 50% 65%, #000 15%, transparent 74%); }
 
 /* Tiny powder grains, without the former foreground bokeh/shadow enlargement. */
-.snow-back, .snow-mid, .snow-front { filter: none; }
+.snow-back, .snow-mid, .snow-front { filter: none; opacity: 1; }
+.snow-mid { z-index: 4; }
 .snowfall i, .snowfall i:nth-child(3n), .snow-front i:nth-child(3n) {
-  background: radial-gradient(circle, #fffdf6 25%, #fff9ecaa 48%, transparent 78%);
+  background: radial-gradient(circle, #ffffff 45%, #fffdf2ee 62%, transparent 85%);
   border-radius: 50%; box-shadow: none; filter: none; transform: none;
   animation-duration: var(--duration);
 }

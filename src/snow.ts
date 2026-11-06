@@ -1,15 +1,15 @@
 export const SNOW_COUNTS = {
-  high: { back: 45, mid: 53, front: 41 },
-  medium: { back: 34, mid: 41, front: 30 },
-  low: { back: 26, mid: 34, front: 23 },
+  high: { back: 60, mid: 60, front: 60 },
+  medium: { back: 45, mid: 45, front: 45 },
+  low: { back: 36, mid: 36, front: 36 },
 } as const;
 /** Powder-sized sources; only one in six particles is 25% larger. */
 export function snowSize(depth: "back" | "mid" | "front", index: number) {
-  const base = depth === "back" ? 1.35 : depth === "mid" ? 1.375 : 1.4;
+  const base = depth === "back" ? 1.8 : depth === "mid" ? 1.95 : 2.08;
   return base * (index % 6 === 0 ? 1.25 : 1);
 }
 export function snowOpacity(depth: "back" | "mid" | "front", index: number) {
-  return (depth === "back" ? .38 : depth === "mid" ? .5 : .6) * [.9, 1, 1.08][index % 3]!;
+  return (depth === "back" ? .65 : depth === "mid" ? .7 : .75) + [0, .1, .2][index % 3]!;
 }
 export type SnowQuality = keyof typeof SNOW_COUNTS;
 export function snowLayer(depth: "back" | "mid" | "front"): string {

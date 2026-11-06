@@ -19,17 +19,27 @@ try {
         labels.push({text,fontSize:style.fontSize});
       }
       const grains=[...document.querySelectorAll('.hero .snowfall i')];
-      if(grains.length!==139)throw Error('snow count');
+      if(grains.length!==180)throw Error('snow count');
       const sizes=grains.map(g=>parseFloat(getComputedStyle(g).width));
-      if(Math.max(...sizes)>1.76||Math.min(...sizes)<1.34||Math.max(...sizes)/Math.min(...sizes)>1.31)throw Error('large grain');
+      if(Math.max(...sizes)>2.61||Math.min(...sizes)<1.79||Math.max(...sizes)/Math.min(...sizes)>1.46)throw Error('large grain');
       for(const g of grains){const s=getComputedStyle(g);if(s.boxShadow!=='none'||!/none|blur\(0.15px\)/.test(s.filter))throw Error('bokeh filter')}
       const a=document.querySelector('#app'), counts={};
       for(const quality of ['high','medium','low']){a.dataset.snowQuality=quality;counts[quality]=grains.filter(g=>getComputedStyle(g).display!=='none').length}
-      if(counts.high!==139||counts.medium!==105||counts.low!==83)throw Error('adaptive counts');
+      if(counts.high!==180||counts.medium!==135||counts.low!==108)throw Error('adaptive counts');
       a.dataset.snowQuality='high';
       return{labels,counts,min:Math.min(...sizes),max:Math.max(...sizes)};
     });
+    const before = await p.locator('.snow-front i').evaluateAll(gs=>gs.slice(1,11).map(g=>g.getBoundingClientRect().y));
+    await p.waitForTimeout(5200);
+    const after = await p.locator('.snow-front i').evaluateAll(gs=>gs.slice(1,11).map(g=>g.getBoundingClientRect().y));
+    if(!after.some((y,i)=>Math.abs(y-before[i])>20))throw Error('snow did not move over five seconds');
+    r.movement = after.map((y,i)=>y-before[i]);
+    await p.evaluate(()=>document.getAnimations().forEach(a=>a.pause()));
     await p.screenshot({path:`${out}/${width}-powder.png`});
+    await p.locator('#app').evaluate(a=>a.classList.add('snow-off'));
+    await p.screenshot({path:`${out}/${width}-off.png`});
+    await p.locator('#app').evaluate(a=>a.classList.remove('snow-off'));
+    await p.evaluate(()=>document.getAnimations().forEach(a=>a.play()));
     const patterns=[];
     for(let i=0;i<4;i++){patterns.push(await p.locator('#lights-toggle').getAttribute('data-pattern'));await p.locator('#lights-toggle').click()}
     if(new Set(patterns).size!==4)throw Error('lighting cycle changed');
@@ -40,7 +50,7 @@ try {
     if(await p.locator('#sheet .snowfall').count())throw Error('snow inside cards');
     if(!await p.locator('.hero .snowfall').evaluateAll(l=>l.every(e=>getComputedStyle(e).visibility==='hidden')))throw Error('snow over modal');
     await p.locator('.village-card[data-village="forest"]').click();
-    if(await p.locator('.hero .snowfall i').count()!==139||await p.locator('#app').evaluate(a=>a.classList.contains('snow-off')))throw Error('village lost snow');
+    if(await p.locator('.hero .snowfall i').count()!==180||await p.locator('#app').evaluate(a=>a.classList.contains('snow-off')))throw Error('village lost snow');
     if(width===375){
       await p.locator('.bottom-nav [data-action="photo"]').click();await p.locator('.photo-preview img').waitFor({timeout:60000});
       const photo=await p.locator('.photo-preview img').evaluate(async i=>{await i.decode();const b=await fetch(i.src).then(r=>r.blob());return{width:i.naturalWidth,height:i.naturalHeight,type:b.type,bytes:Array.from(new Uint8Array(await b.arrayBuffer()))}});

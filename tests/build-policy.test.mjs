@@ -20,7 +20,7 @@ test("default development build and tests cannot generate AIT fixtures or run re
   ])
     assert.doesNotMatch(command, /\bait\b/i);
 });
-test("automatic workflow is web-only; release workflow has only a guarded manual trigger", async () => {
+test("ordinary pushes stay web-only; AIT needs confirmed dispatch or an explicit SHA-pinned release tag", async () => {
   const web = await readFile(
     new URL(".github/workflows/build.yml", root),
     "utf8",
@@ -47,9 +47,13 @@ test("automatic workflow is web-only; release workflow has only a guarded manual
   assert.match(triggers, /workflow_dispatch:/);
   assert.doesNotMatch(
     triggers,
-    /\b(push|pull_request|schedule|workflow_run|workflow_call):/,
+    /\b(branches|pull_request|schedule|workflow_run|workflow_call):/,
   );
-  assert.match(release, /if: inputs\.confirm_release == true/);
+  assert.match(release, /github\.event_name == 'workflow_dispatch' && inputs\.confirm_release == true/);
+  assert.match(triggers, /tags: \['ait-release\/\*'\]/);
+  assert.match(release, /test "\$release_branch_sha" = "\$GITHUB_SHA"/);
+  assert.match(release, /test "\$release_tag_sha" = "\$GITHUB_SHA"/);
+  assert.match(release, /test "\$GITHUB_REF" = "refs\/heads\/feat\/elliptical-train-ride"/);
   assert.match(release, /default: false/);
 });
 test("Pages publishing uses only the authorized development branch and excludes pull requests", async () => {

@@ -1,7 +1,9 @@
 name: Build release AIT (manual only)
 
-# Final release only. No push, pull_request, schedule or workflow_run triggers.
+# Explicit release only: confirmed dispatch or a manually pushed SHA-pinned release tag.
 on:
+  push:
+    tags: ['ait-release/*']
   workflow_dispatch:
     inputs:
       confirm_release:
@@ -15,7 +17,7 @@ permissions:
 
 jobs:
   release:
-    if: inputs.confirm_release == true
+    if: (github.event_name == 'workflow_dispatch' && inputs.confirm_release == true) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/ait-release/'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -23,6 +25,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Require latest development commit and explicit release intent
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_branch_sha="$(git ls-remote origin refs/heads/feat/elliptical-train-ride | cut -f1)"
+          test "$release_branch_sha" = "$GITHUB_SHA"
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            release_tag_sha="${GITHUB_REF#refs/tags/ait-release/}"
+            test "$release_tag_sha" = "$GITHUB_SHA"
+          else
+            test "$GITHUB_REF" = "refs/heads/feat/elliptical-train-ride"
+          fi
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -37,7 +52,9 @@ jobs:
         run: npm ci
       - name: Explicit final release build and validation
         run: npm run release:ait
-      - name: Upload official AIT ZIP
+      - name: Verify packaged live ad configuration and SDK argument contract
+        run: node scripts/check-release-ad.mjs
+      - name: Upload official AIT artifact
         uses: actions/upload-artifact@v4
         with:
           name: merry-village-ait-${{ github.run_number }}-${{ github.run_attempt }}-${{ github.sha }}

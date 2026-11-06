@@ -127,6 +127,7 @@ export type TrackId =
   | "waltz"
   | "holy-night"
   | "bethlehem";
+export const BASIC_TRACK_IDS: readonly TrackId[] = ["snow", "starlight"];
 export const BASIC_VILLAGES = [
   { id: "christmas-bell-house", name: "크리스마스 종탑집", subtitle: "작은 집과 트리의 포근한 크리스마스", detail: "따뜻한 창문과 작은 가로등이 반기는 무료 오르골.", premium: false },
   { id: "snowman-forest-house", name: "눈사람 숲속집", subtitle: "눈사람이 기다리는 조용한 숲속집", detail: "초록 지붕 아래 눈사람과 트리가 함께하는 무료 오르골.", premium: false },

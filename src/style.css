@@ -1958,8 +1958,8 @@ html, body { max-width: 100%; overflow-x: clip; }
 @media (prefers-reduced-motion: reduce) { .snowfall i { opacity: var(--snow-alpha, .5); } }
 
 /* Two static basic miniatures use the supplied full composition without cropping. */
-.basic-stage { position: relative; width: 88%; margin: 0 auto; aspect-ratio: 1199 / 1312; overflow: hidden; border-radius: 16px; }
-.basic-stage .product-plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: none; }
+.basic-stage { position: relative; width: 104%; margin: 0 -2%; aspect-ratio: 1199 / 1312; overflow: visible; border-radius: 0; background: none; border: 0; box-shadow: none; }
+.basic-stage .product-plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: none; mask-size: 100% 100%; mask-repeat: no-repeat; }
 .basic-lights { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
 .basic-stage .snow-mid { z-index: 4; }
 #app [hidden] { display: none !important; }

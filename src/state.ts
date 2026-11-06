@@ -2,7 +2,7 @@ import { LIGHT_PATTERNS, type LightPattern } from "./lighting.ts";
 import {
   NIGHTS,
   TRACKS,
-  VILLAGES, ALL_VILLAGES, isBasicVillage,
+  VILLAGES, ALL_VILLAGES, BASIC_TRACK_IDS, isBasicVillage,
   type NightId,
   type TrackId,
   type VillageId, type SelectionId,
@@ -127,6 +127,6 @@ export function reconcileAccess(p: Preferences, now: number): boolean {
   let changed = false;
   if (!canUseVillage(p, p.village, now)) { p.village = "christmas-bell-house"; changed = true; }
   if (p.effect) { p.effect = null; changed = true; }
-  if (isBasicVillage(p.village) && p.track !== "snow") { p.track = "snow"; changed = true; }
+  if (isBasicVillage(p.village) && !BASIC_TRACK_IDS.includes(p.track)) { p.track = "snow"; changed = true; }
   return changed;
 }

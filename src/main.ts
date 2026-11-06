@@ -4,7 +4,7 @@ import { snowLayer, adaptSnow } from "./snow";
 import { TrainSound } from "./train-sound";
 import "./style.css";
 import {
-  VILLAGES, BASIC_VILLAGES, ALL_VILLAGES, isBasicVillage,
+  VILLAGES, BASIC_VILLAGES, ALL_VILLAGES, BASIC_TRACK_IDS, isBasicVillage,
   TRACKS,
   villageById,
   type SelectionId,
@@ -165,8 +165,7 @@ player.setRepeat(true);
 let playerTrack = preferences.track;
 function selectTrack(track: TrackId) { playerTrack = track; player.select(track); }
 function changeTrack(direction: number) {
-  if (basic()) return;
-  const tracks = TRACKS.filter((t) => t.available);
+  const tracks = TRACKS.filter((t) => t.available && (!basic() || BASIC_TRACK_IDS.includes(t.id as TrackId)));
   const i = tracks.findIndex((t) => t.id === preferences.track);
   preferences.track = tracks[(i + direction + tracks.length) % tracks.length]!
     .id as TrackId;
@@ -176,7 +175,7 @@ function changeTrack(direction: number) {
   updateMusic();
 }
 function updateMusic(): void {
-  for (const button of app.querySelectorAll<HTMLButtonElement>('.transport')) button.hidden = basic();
+  for (const button of app.querySelectorAll<HTMLButtonElement>('.transport')) button.hidden = false;
   const track = TRACKS.find((t) => t.id === preferences.track)!;
   app.querySelector("#song-name")!.textContent = track.name;
   app.querySelector("#music-status")!.textContent =
@@ -207,7 +206,7 @@ function updateMusic(): void {
 }
 function render(): void {
   const current = display();
-  if (basic()) preferences.track = "snow";
+  if (basic() && !BASIC_TRACK_IDS.includes(preferences.track)) preferences.track = "snow";
   if (playerTrack !== preferences.track) {
     const playing = musicState === "playing";
     selectTrack(preferences.track);
@@ -354,7 +353,7 @@ function renderSheet(): void {
     }).join("")}</div>`;
     content.innerHTML = `<h3>무료 베이직</h3>${cards([...BASIC_VILLAGES])}<h3>프리미엄 빌리지</h3><p class="sheet-description">광고 1회 정상 시청 후 선택한 빌리지를 7일 동안 이용해요. 잠긴 마을은 정적 이미지로 미리 볼 수 있어요.</p>${cards([...VILLAGES])}`;
   } else if (sheet === "music") {
-    content.innerHTML = `<p class="sheet-description">${basic() ? "무료 베이직은 고요한 밤 한 곡을 반복해요." : "직접 만든 오르골 캐럴 5곡이에요."}<br>브라우저에서는 첫 재생에 터치가 필요할 수 있어요.</p><p class="small-note">선택한 곡을 계속 반복해요.${basic() ? "" : " 이전·다음 버튼으로 곡을 바꿀 수 있어요."}</p><div class="tracks">${(basic() ? TRACKS.filter(t => t.id === "snow") : TRACKS).map((t, i) => `<button class="track-row" data-track="${t.id}" ${!t.available ? "disabled" : ""} aria-pressed="${preferences.track === t.id}"><span class="track-number">0${i + 1}</span><span><strong>${t.name}</strong><small>${t.mood} · ${t.bpm} BPM</small></span><span class="track-note">${icon("music")}</span></button>`).join("")}</div><div class="volume-control"><label for="volume">음량</label><input id="volume" type="range" min="0" max="1" step="0.05" value="${preferences.volume}"><output id="volume-value">${Math.round(preferences.volume * 100)}%</output><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button></div><p class="small-note">외부 녹음물을 사용하지 않는 자체 합성 연주예요. 악보의 Public Domain 표기와 출처는 프로젝트 음악 권리 문서에 기록했어요.</p>`;
+    content.innerHTML = `<p class="sheet-description">${basic() ? "무료 베이직은 고요한 밤과 징글벨 두 곡을 즐길 수 있어요." : "직접 만든 오르골 캐럴 5곡이에요."}<br>브라우저에서는 첫 재생에 터치가 필요할 수 있어요.</p><p class="small-note">선택한 곡을 계속 반복해요. 이전·다음 버튼으로 곡을 바꿀 수 있어요.</p><div class="tracks">${(basic() ? TRACKS.filter(t => BASIC_TRACK_IDS.includes(t.id as TrackId)) : TRACKS).map((t, i) => `<button class="track-row" data-track="${t.id}" ${!t.available ? "disabled" : ""} aria-pressed="${preferences.track === t.id}"><span class="track-number">0${i + 1}</span><span><strong>${t.name}</strong><small>${t.mood} · ${t.bpm} BPM</small></span><span class="track-note">${icon("music")}</span></button>`).join("")}</div><div class="volume-control"><label for="volume">음량</label><input id="volume" type="range" min="0" max="1" step="0.05" value="${preferences.volume}"><output id="volume-value">${Math.round(preferences.volume * 100)}%</output><button class="round-play" data-action="play" aria-label="음악 재생">${icon("play")}</button></div><p class="small-note">외부 녹음물을 사용하지 않는 자체 합성 연주예요. 악보의 Public Domain 표기와 출처는 프로젝트 음악 권리 문서에 기록했어요.</p>`;
   } else if (sheet === "pass") {
     const active = targetActive();
     const label = villageById(rewardTarget).name;
@@ -526,7 +525,7 @@ app.addEventListener("click", async (event) => {
       checkExpiry();
       if (!villageUnlocked(village)) { openSheet("pass",village); return; }
       preferences.village = village;
-      if (isBasicVillage(village)) preferences.track = "snow";
+      if (isBasicVillage(village) && !BASIC_TRACK_IDS.includes(preferences.track)) preferences.track = "snow";
       persist();
     }
     render();
@@ -534,7 +533,7 @@ app.addEventListener("click", async (event) => {
     return;
   }
   if (track) {
-    if (basic() && track !== "snow") return;
+    if (basic() && !BASIC_TRACK_IDS.includes(track)) return;
     if (!TRACKS.some((t) => t.id === track && t.available)) {
       toast("이 곡은 권리 확인 중이라 재생할 수 없어요.");
       return;

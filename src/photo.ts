@@ -5,6 +5,7 @@ import { type LightPattern } from "./lighting";
 import background from "./assets/christmas-room.webp";
 import { productSource } from "./product";
 import { isBasicVillage, type NightId, type SelectionId } from "./catalog";
+import { basicMaskSource } from "./basic-art";
 import { drawBasicLights, type BasicPattern } from "./basic-lights";
 const images = new Map<string, Promise<HTMLImageElement>>();
 async function load(src: string) {
@@ -76,9 +77,14 @@ export async function captureVillage(
   };
   drawSnow("back");
   if (isBasicVillage(id)) {
-    const width = 1040, height = width * 1312 / 1199;
-    c.drawImage(atlas,80,200,width,height);
-    drawBasicLights(c,id,basicPattern,lightingTime,80,200,width,height);
+    const width = 1200, height = width * 1312 / 1199;
+    const masked = document.createElement("canvas"); masked.width = 1199; masked.height = 1312;
+    const m = masked.getContext("2d")!;
+    m.drawImage(atlas,0,0,1199,1312);
+    m.globalCompositeOperation = "destination-in";
+    m.drawImage(await load(basicMaskSource(id)),0,0,1199,1312);
+    c.drawImage(masked,0,100,width,height);
+    drawBasicLights(c,id,basicPattern,lightingTime,0,100,width,height);
   } else c.drawImage(atlas, 0, 180, 1200, 1200);
   drawNightReflection(c, effect, 1200, 180, 1200);
   drawSnow("mid");

@@ -34,12 +34,12 @@ try{
   const p=await browser.newPage({viewport:{width,height}});p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text())});await p.goto(base);await p.locator('.basic-lights').waitFor();await p.locator('.product-plate').evaluate(i=>i.decode());
   assert.equal(await p.locator('#app').getAttribute('data-village'),'christmas-bell-house');assert.equal(await p.locator('#motion-toggle').isVisible(),false);
   assert.equal(await p.locator('.bottom-nav button').count(),3);assert.equal(await p.locator('.actor-stage').count(),0);
-  assert.equal(await p.locator('.transport:visible').count(),0);assert.equal(await p.locator('#song-name').textContent(),'고요한 밤');
+  assert.equal(await p.locator('.transport:visible').count(),2);assert.equal(await p.locator('#song-name').textContent(),'고요한 밤');
   assert.equal(await p.locator('.hero .snowfall i').count(),180);
   const details=await layout(p);await p.screenshot({path:`${out}/${width}-${height}-bell.png`});
   const patterns=[];for(let i=0;i<3;i++){patterns.push(await p.locator('#lights-toggle').getAttribute('data-pattern'));await p.locator('#lights-toggle').click()}
   assert.deepEqual(patterns,['gentle','twinkle','gentle']);
-  await p.locator('.bottom-nav [data-action="music"]').click();assert.equal(await p.locator('[data-track]').count(),1);await p.locator('[data-action="close"]').click();
+  await p.locator('.bottom-nav [data-action="music"]').click();assert.equal(await p.locator('[data-track]').count(),2);await p.locator('[data-action="close"]').click();
   await p.locator('#snow-toggle').click();assert.equal(await p.locator('#app').evaluate(a=>a.classList.contains('snow-off')),true);await p.locator('#snow-toggle').click();
   await select(p,'snowman-forest-house');assert.equal(await p.locator('.actor-stage').count(),0);assert.equal(await p.locator('.hero .snowfall i').count(),180);
   await p.screenshot({path:`${out}/${width}-${height}-snowman.png`});

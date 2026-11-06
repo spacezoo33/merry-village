@@ -16,12 +16,14 @@ import palaceThumb from "./assets/villages/palace-thumb.webp";
 import gingerbreadThumb from "./assets/villages/gingerbread-thumb.webp";
 import lakeThumb from "./assets/villages/aurora-lake-thumb.webp";
 import observatoryThumb from "./assets/villages/observatory-thumb.webp";
-import type { SelectionId } from "./catalog";
+import { isBasicVillage, type SelectionId } from "./catalog";
+import { basicMaskSource } from "./basic-art";
 const images: Record<SelectionId, string> = { "christmas-bell-house": bell, "snowman-forest-house": snowman, cozy, forest, chapel, palace, gingerbread, "aurora-lake": lake, observatory };
 const thumbs: Record<SelectionId, string> = { "christmas-bell-house": bellThumb, "snowman-forest-house": snowmanThumb, cozy: cozyThumb, forest: forestThumb, chapel: chapelThumb, palace: palaceThumb, gingerbread: gingerbreadThumb, "aurora-lake": lakeThumb, observatory: observatoryThumb };
 export const productSource = (id: SelectionId) => images[id];
 export function productImage(id: SelectionId): string {
-  return `<img class="product-plate" src="${images[id]}" width="627" height="627" alt="" decoding="async" />`;
+  const mask = isBasicVillage(id) ? ` style="mask-image:url('${basicMaskSource(id)}');mask-mode:alpha"` : "";
+  return `<img${mask} class="product-plate" src="${images[id]}" width="627" height="627" alt="" decoding="async" />`;
 }
 export function productThumbnail(id: SelectionId): string {
   return `<img src="${thumbs[id]}" width="384" height="384" alt="" loading="lazy" decoding="async" />`;

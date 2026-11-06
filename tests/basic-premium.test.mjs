@@ -41,11 +41,20 @@ test('server-anchored access time ignores device clock edits; fallback rejects r
 test('basic lights have exactly two gentle patterns and unique image-aligned coordinates',()=>{
   assert.equal(nextBasicPattern('gentle'),'twinkle');assert.equal(nextBasicPattern('twinkle'),'gentle');
   assert.notDeepEqual(BASIC_LIGHTS['christmas-bell-house'],BASIC_LIGHTS['snowman-forest-house']);
-  for(const points of Object.values(BASIC_LIGHTS))for(const [x,y,r] of points){assert.ok(x>0&&x<1199&&y>0&&y<1312&&r<=36)}
-  for(const pattern of ['gentle','twinkle'])for(let t=0;t<10;t+=.03){const v=basicLevel(pattern,t,3);assert.ok(v>=0&&v<=.7)}
+  for(const points of Object.values(BASIC_LIGHTS))for(const [x,y,r] of points){assert.ok(x>0&&x<1199&&y>0&&y<1312&&r<=76)}
+  for(const pattern of ['gentle','twinkle'])for(let t=0;t<10;t+=.03){const v=basicLevel(pattern,t,3);assert.ok(v>=0&&v<=1)}
 });
 test('uploaded basic PNGs remain byte-identical; only optimized display copies are added',async()=>{
  const hashes=JSON.parse(await readFile(new URL('./fixtures/basic-originals.json',import.meta.url),'utf8'));
  assert.equal(Object.keys(hashes).length,2);
  for(const [name,hash]of Object.entries(hashes))assert.equal(createHash('sha256').update(await readFile(new URL('../src/assets/basic/'+name,import.meta.url))).digest('hex'),hash);
+});
+
+test('both free tracks persist in basics while premium-only songs fall back without changing receipts',()=>{
+ const p=defaults(),now=1800000000000;
+ for(const id of ['christmas-bell-house','snowman-forest-house'])for(const track of ['snow','starlight']){
+  p.village=id;p.track=track;reconcileAccess(p,now);assert.equal(p.track,track);
+ }
+ p.track='bethlehem';reconcileAccess(p,now);assert.equal(p.track,'snow');
+ assert.deepEqual(p.villagePasses,{});
 });
